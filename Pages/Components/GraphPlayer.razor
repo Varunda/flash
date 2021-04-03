@@ -1,0 +1,85 @@
+﻿@using watchtower.Services 
+
+@inject IMatchManager _Match
+
+<div>
+    <div style="border-bottom: 2px #e8b55c solid; font-size: 52pt; text-align: center;">
+        @Player.RunnerName
+    </div>
+
+    <table class="table table-sm" style="color: #e8b55c; font-size: 24pt">
+        <tr>
+            <td>Kills</td>
+            <td>
+                @Player.Score
+            </td>
+        </tr>
+
+        <tr>
+            <td>KPM</td>
+            <td>
+                @String.Format("{0,2:F2}", _kpm)
+            </td>
+        </tr>
+
+        <tr>
+            <td>HSR%</td>
+            <td>
+                @String.Format("{0,2:F2}%", _hsr)
+            </td>
+        </tr>
+
+        <tr>
+            <td>Deaths</td>
+            <td>
+                @Player.Deaths.Count
+            </td>
+        </tr>
+
+        <tr>
+            <td>K/D</td>
+            <td>
+                @String.Format("{0,2:F2}", _kd)
+            </td>
+        </tr>
+
+        <tr>
+            <td>Avg streak</td>
+            <td>
+                @String.Format("{0,2:F2}", _avgStreak)
+            </td>
+        </tr>
+    </table>
+</div>
+
+@code {
+
+    [Parameter]
+    public TrackedPlayer Player { get; set; }
+
+    private double _kpm;
+    private double _kd;
+    private double _hsr;
+    private double _avgStreak;
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        int len = _Match.GetMatchLength();
+
+        _kpm = (double) Player.Score / Math.Max(1D, (double) len) * 60D;
+        _kd = (double) Player.Score / Math.Max(1D, (double) Player.Deaths.Count);
+        _hsr = (((double) Math.Max(1, Player.ValidKills.Where(iter => iter.IsHeadshot == true).Count()) / ((double) Player.ValidKills.Count))) * 100;
+
+        if (Player.Streaks.Count > 0) {
+            foreach (int streak in Player.Streaks) {
+                _avgStreak += streak;
+            }
+            _avgStreak = _avgStreak / Player.Streaks.Count;
+        } else {
+            _avgStreak = 0;
+        }
+
+    }
+
+}

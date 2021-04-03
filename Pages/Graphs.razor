@@ -1,0 +1,173 @@
+﻿@page "/graphs"
+
+@using watchtower.Models.Events; 
+@using Plotly.Blazor.LayoutLib 
+@using Microsoft.Extensions.Logging
+@using watchtower.Pages.Components
+
+@inject IMatchManager _Match 
+@inject ILogger<Graphs> _Logger 
+
+<div class="container-fluid">
+    <div class="row h-100" style="font-family: ps2; color: #e8b55c; background-color: #373737">
+        <div class="col-3">
+            @if (_player1 != null) {
+                <GraphPlayer Player="_player1"></GraphPlayer>
+            } else {
+                <div>
+                    Runner 1 not set
+                </div>
+            }
+        </div>
+
+        <div class="col-6 px-0" style="background-color: #e7e7e7">
+            <PlotlyChart style="width: 100%; height: 500px; background-color: #373737;" @bind-Config="_config" @bind-Layout="_layout" @bind-Data="_data" @ref="chart"></PlotlyChart>
+        </div>
+
+        <div class="col-3">
+            @if (_player2 != null) {
+                <GraphPlayer Player="_player2"></GraphPlayer>
+            } else {
+                <div>
+                    Runner 2 not set
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+
+    private PlotlyChart chart;
+    private Config _config = new Config() {
+        Responsive = true
+    };
+
+    private Layout _layout = new Layout();
+    private IList<ITrace> _data = new List<ITrace>();
+
+    private int _MatchLength = 0;
+
+    private TrackedPlayer? _player1 = null;
+
+    private TrackedPlayer? _player2 = null;
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _MatchLength = _Match.GetMatchLength();
+
+        SetupChartData();
+        SetupPlayerData();
+    }
+
+    private void SetupPlayerData() {
+        _player1 = _Match.GetPlayer(0);
+        _player2 = _Match.GetPlayer(1);
+    }
+
+    private void SetupChartData() {
+        int length = _Match.GetMatchLength();
+        _Logger.LogInformation($"Match length: {length}");
+
+        _layout = new Layout() {
+            Title = new Title() {
+                Text = "Kills",
+                Font = new Plotly.Blazor.LayoutLib.TitleLib.Font() {
+                    Color = "#e8b55c",
+                    Family = "ps2",
+                    Size = 24
+                }
+            },
+            YAxis = new List<YAxis>() {
+                new YAxis() {
+                    Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title() { Text = "Kills" },
+                    LineWidth = 5,
+                    Color = "#e8b55c"
+                }
+            },
+            XAxis = new List<XAxis>() {
+                new XAxis() {
+                    Title = new Plotly.Blazor.LayoutLib.XAxisLib.Title() { Text = "Time" },
+                    TickMode = Plotly.Blazor.LayoutLib.XAxisLib.TickModeEnum.Array,
+                    Tick0 = 0,
+                    LineWidth = 5,
+                    Color = "#e8b55c",
+                    GridColor = "#cb9e51"
+                }
+            },
+            PlotBgColor = "#373737",
+            PaperBgColor = "#373737",
+            Legend = new Legend() {
+                Font = new Plotly.Blazor.LayoutLib.LegendLib.Font() {
+                    Family = "ps2",
+                    Color = "#e8b55c",
+                    Size = 24
+                },
+                Orientation = Plotly.Blazor.LayoutLib.LegendLib.OrientationEnum.H
+            }
+        };
+
+        _layout.XAxis[0].TickVals = new List<object>();
+        _layout.XAxis[0].TickText = new List<object>();
+        for (int i = 0; i < length; i += 60) {
+            _layout.XAxis[0].TickVals.Add(i);
+            _layout.XAxis[0].TickText.Add($"{Math.Floor(i / 60D)}:00");
+            //_Logger.LogInformation($"Adding tick at {i}");
+        }
+
+        foreach (var i in _layout.XAxis[0].TickText) {
+            _Logger.LogInformation($"{i}");
+        }
+
+        List<Scatter> sets = new List<Scatter>();
+
+        TimeSpan matchStart = new TimeSpan(_Match.GetMatchStart().Ticks);
+
+        foreach (TrackedPlayer player in _Match.GetPlayers()) {
+            //_Logger.LogInformation($"{player.RunnerName} has {player.Kills.Count} kills");
+            Scatter set = new Scatter();
+            set.Name = player.RunnerName;
+            set.Mode = ModeFlag.Lines | ModeFlag.Markers;
+            set.XAxis = "x1";
+            set.Line = new Line() {
+                Width = 5
+            };
+
+            List<object> X = new List<object>();
+            List<object> Y = new List<object>();
+
+            int index = 0;
+
+            X.Add(0);
+            Y.Add(0);
+
+            foreach (KillEvent ev in player.ValidKills) {
+                TimeSpan span = new TimeSpan(ev.Timestamp.Ticks);
+                double pos = ((double) ((span - matchStart).TotalSeconds)) / 60D;
+                X.Add(pos);
+                Y.Add(++index);
+            }
+            X.Add(_MatchLength / 60D);
+            Y.Add(index);
+
+            set.X = new List<object>(X);
+            set.Y = new List<object>(Y);
+
+            sets.Add(set);
+        }
+
+        _data = new List<ITrace>(sets);
+
+        InvokeAsync(async () => {
+            await chart!.React();
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender == true) {
+            await chart!.React();
+        }
+    }
+
+}

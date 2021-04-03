@@ -1,0 +1,170 @@
+﻿@page "/"
+
+@using watchtower.Services;
+@using watchtower.Models;
+@using watchtower.Models.Events;
+@using watchtower.Constants;
+
+@inject IMatchManager _Match; 
+@inject IEventBroadcastService _Events;
+
+<div class="container-fluid">
+
+    <div class="row">
+        <div class="col-12">
+            <h1>Runner setup</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-3">
+            <h2>Runner 1</h2>
+
+            <EditForm Model="@_inputPlayer1" OnValidSubmit="UpdatePlayer1">
+                <div class="input-group">
+                    <span class="input-group-prepend input-group-text">
+                        Player 1
+                    </span>
+
+                    <input type="text" class="form-control" @bind-value="_inputPlayer1" disabled="@(_loading1 == true)" />
+
+                    <div class="input-group-append">
+                        <button type="submit" class="btn btn-primary">
+                            Update
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+
+            <EditForm Model="@_inputName1" OnValidSubmit="UpdatePlayer1">
+                <div class="input-group">
+                    <span class="input-group-prepend input-group-text">
+                        Name
+                    </span>
+
+                    <input type="text" class="form-control" @bind-value="_inputName1" />
+
+                    <div class="input-group-append">
+                        <button type="submit" class="btn btn-primary">
+                            Update
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+
+            <hr />
+
+            @if (_player1 != null) {
+                <div>
+                    ID: @_player1.ID
+                </div>
+            }
+        </div>
+
+        <div class="col-3">
+            <h2>Runner 2</h2>
+
+            <EditForm Model="@_inputPlayer2" OnValidSubmit="UpdatePlayer2">
+                <div class="input-group">
+                    <span class="input-group-prepend input-group-text">
+                        Player 2
+                    </span>
+
+                    <input type="text" class="form-control" @bind-value="_inputPlayer2" disabled="@(_loading2 == true)" />
+
+                    <div class="input-group-append">
+                        <button type="submit" class="btn btn-primary">
+                            Update
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+
+            <EditForm Model="@_inputName2" OnValidSubmit="UpdatePlayer2">
+                <div class="input-group">
+                    <span class="input-group-prepend input-group-text">
+                        Name
+                    </span>
+
+                    <input type="text" class="form-control" @bind-value="_inputName2" />
+
+                    <div class="input-group-append">
+                        <button type="submit" class="btn btn-primary">
+                            Update
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+
+            <hr />
+
+            @if (_player2 != null) {
+                <div>
+                    ID: @_player2.ID
+                </div>
+            }
+        </div>
+
+        <div class="col-6">
+            <h2>Match controls</h2>
+
+            <div>
+                Current state: @_MatchState
+            </div>
+
+            <button type="button" class="btn btn-primary" @onclick="StartMatch">Start</button>
+
+            <button type="button" class="btn btn-danger" @onclick="ResetMatch">Reset</button>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    private string _inputPlayer1 = "";
+    private string _inputName1 = "";
+    private bool _loading1 = false;
+    private TrackedPlayer? _player1;
+
+    private string _inputPlayer2 = "";
+    private string _inputName2 = "";
+    private bool _loading2 = false;
+    private TrackedPlayer? _player2;
+
+    private MatchState _MatchState = MatchState.UNSTARTED;
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _MatchState = _Match.GetState();
+
+        _Events.OnMatchStateEvent += OnMatchStateEvent;
+    }
+
+    private async Task UpdatePlayer1() {
+        _loading1 = true;
+        await _Match.SetPlayer(0, _inputPlayer1, _inputName1);
+        _player1 = _Match.GetPlayer(0);
+        _loading1 = false;
+    }
+
+    private async Task UpdatePlayer2() {
+        _loading2 = true;
+        await _Match.SetPlayer(1, _inputPlayer2, _inputName2);
+        _player2 = _Match.GetPlayer(1);
+        _loading2 = false;
+    }
+
+    private void StartMatch() {
+        _Match.Start();
+    }
+
+    private void ResetMatch() {
+        _Match.Reset();
+    }
+
+    private void OnMatchStateEvent(object? sender, Ps2EventArgs<MatchState> args) {
+        _MatchState = args.Payload;
+    }
+
+}
