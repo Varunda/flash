@@ -111,21 +111,22 @@
         _layout.XAxis[0].TickVals = new List<object>();
         _layout.XAxis[0].TickText = new List<object>();
         for (int i = 0; i < length; i += 60) {
-            _layout.XAxis[0].TickVals.Add(i);
+            _layout.XAxis[0].TickVals.Add(Math.Floor(i / 60D));
             _layout.XAxis[0].TickText.Add($"{Math.Floor(i / 60D)}:00");
-            //_Logger.LogInformation($"Adding tick at {i}");
+            _Logger.LogTrace($"Adding tick at {i}");
         }
 
-        foreach (var i in _layout.XAxis[0].TickText) {
-            _Logger.LogInformation($"{i}");
-        }
+        _layout.XAxis[0].TickVals.Add((double) length / 60D);
+        _layout.XAxis[0].TickText.Add(String.Format("{0,2:D2}:{1,2:D2}", (int) Math.Floor(_MatchLength / 60D), _MatchLength % 60));
+
+        _Logger.LogDebug($"XAxis:\n\tText: {String.Join(", ", _layout.XAxis[0].TickText)}\n\tVals: {String.Join(", ", _layout.XAxis[0].TickVals)}");
 
         List<Scatter> sets = new List<Scatter>();
 
         TimeSpan matchStart = new TimeSpan(_Match.GetMatchStart().Ticks);
 
         foreach (TrackedPlayer player in _Match.GetPlayers()) {
-            //_Logger.LogInformation($"{player.RunnerName} has {player.Kills.Count} kills");
+            _Logger.LogDebug($"{player.RunnerName} has {player.Kills.Count} kills");
             Scatter set = new Scatter();
             set.Name = player.RunnerName;
             set.Mode = ModeFlag.Lines | ModeFlag.Markers;
@@ -148,6 +149,8 @@
                 X.Add(pos);
                 Y.Add(++index);
             }
+
+            // Add value at the end, useful if the match is currently running
             X.Add(_MatchLength / 60D);
             Y.Add(index);
 

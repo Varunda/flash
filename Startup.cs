@@ -71,6 +71,14 @@ namespace watchtower {
                app.UseDeveloperExceptionPage();
             }
 
+            app.Use(async (context, next) => {
+                context.Response.Headers.Add("Content-Security-Policy",
+                    "script-src 'self' * 'unsafe-inline' 'unsafe-eval';"
+                    + "style-src 'self' 'unsafe-inline'"
+                );
+                await next();
+            });
+
             //app.UseHttpsRedirection();
 
             app.UseStaticFiles();
