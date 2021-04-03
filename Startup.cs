@@ -12,7 +12,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.Logging;
 using watchtower.Census;
-using watchtower.Hubs;
 using watchtower.Realtime;
 using watchtower.Services;
 using Newtonsoft.Json.Linq;
@@ -86,8 +85,6 @@ namespace watchtower {
             app.UseEndpoints(endpoints => {
                 endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
-
-                endpoints.MapHub<DataHub>("/ws/data");
             });
 
             Console.WriteLine($"Request pipeline configured");

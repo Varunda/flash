@@ -31,6 +31,9 @@ namespace watchtower.Services {
 
         public event EventHandler<Ps2EventArgs<MatchState>>? OnMatchStateEvent;
         public delegate void MatchStateEvent(object sender, Ps2EventArgs<MatchState> args);
+
+        public event EventHandler<Ps2EventArgs<MatchSettings>>? OnMatchSettingsEvent;
+        public delegate void MatchSettingsEvent(object sender, Ps2EventArgs<MatchSettings> args);
         
         public void EmitKillEvent(KillEvent ev) {
             OnKillEvent?.Invoke(this, new Ps2EventArgs<KillEvent>(ev));
@@ -50,6 +53,10 @@ namespace watchtower.Services {
 
         public void EmitMatchStateEvent(MatchState state) {
             OnMatchStateEvent?.Invoke(this, new Ps2EventArgs<MatchState>(state));
+        }
+
+        public void EmitMatchSettingsEvent(MatchSettings settings) {
+            OnMatchSettingsEvent?.Invoke(this, new Ps2EventArgs<MatchSettings>(settings));
         }
 
     }

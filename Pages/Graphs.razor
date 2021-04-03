@@ -20,7 +20,11 @@
             }
         </div>
 
-        <div class="col-6 px-0" style="background-color: #e7e7e7">
+        <div class="col-6 px-0" style="background-color: #373737">
+            <div style="text-align: center; background-color: #373737; font-size: 24pt;">
+                @(String.Format("{0,2:D2}:{1,2:D2}", (int) Math.Floor(_MatchLength / 60D), _MatchLength % 60))
+            </div>
+
             <PlotlyChart style="width: 100%; height: 500px; background-color: #373737;" @bind-Config="_config" @bind-Layout="_layout" @bind-Data="_data" @ref="chart"></PlotlyChart>
         </div>
 

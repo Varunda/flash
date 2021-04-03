@@ -34,16 +34,61 @@ namespace watchtower.Services {
         /// </summary>
         void Stop();
 
+        /// <summary>
+        /// Get the current state of the match
+        /// </summary>
         MatchState GetState();
 
-        Task SetPlayer(int index, string charName, string? playerName);
+        /// <summary>
+        /// Set the settings used in a match
+        /// </summary>
+        /// <param name="settings">Settings to use in the match</param>
+        void SetSettings(MatchSettings settings);
 
+        /// <summary>
+        /// Get the current settings in a match
+        /// </summary>
+        /// <returns></returns>
+        MatchSettings GetSettings();
+
+        /// <summary>
+        /// Add a new character to a runner. If no runner at the index has been set, a new runner is created
+        /// </summary>
+        /// <param name="index">Index of the runner to add the character to</param>
+        /// <param name="charName">Name of the character to add. Case insensitive</param>
+        /// <returns>If the character was successfully added or not</returns>
+        Task<bool> AddCharacter(int index, string charName);
+
+        /// <summary>
+        /// Set the name of a runner
+        /// </summary>
+        /// <param name="index">Index of the runner to set</param>
+        /// <param name="playerName">Name of the runner to set</param>
+        void SetRunnerName(int index, string? playerName);
+
+        /// <summary>
+        /// Set the score of a runner
+        /// </summary>
+        /// <param name="index">Index of the runner to set the score of</param>
+        /// <param name="score">Score to set the runner to</param>
         void SetScore(int index, int score);
 
+        /// <summary>
+        /// Get the score of a runner
+        /// </summary>
+        /// <param name="index">Index of the runner to get the score of</param>
         int GetScore(int index);
 
+        /// <summary>
+        /// Get the runner being tracked
+        /// </summary>
+        /// <param name="index">Index of the runner to get</param>
         TrackedPlayer? GetPlayer(int index);
 
+        /// <summary>
+        /// Get all runners in this match
+        /// </summary>
+        /// <returns>The list of runners</returns>
         List<TrackedPlayer> GetPlayers();
 
         /// <summary>
@@ -56,6 +101,9 @@ namespace watchtower.Services {
         /// </summary>
         DateTime? GetMatchEnd();
 
+        /// <summary>
+        /// Get how many seconds a match has been running for. Not really useful if the match has not started
+        /// </summary>
         int GetMatchLength();
 
     }

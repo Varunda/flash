@@ -1,0 +1,40 @@
+﻿
+<div>
+    <h5>Runner @(Player.Index + 1)</h5>
+
+    <div class="mb-3">
+        <b>Name:</b> @Player.RunnerName
+    </div>
+
+    <div>
+        <b>Characters:</b>
+    </div>
+
+    <table class="table table-sm">
+        <tr class="table-secondary">
+            <th>Character name</th>
+            <th>Faction</th>
+        </tr>
+
+        @foreach (Character ch in Player.Characters) {
+            <tr>
+                <td>
+                    @if (ch.OutfitName != null) {
+                        <text>[</text>@ch.OutfitTag<text>]</text>
+                    }
+                    @ch.Name
+                </td>
+                <td>
+                    <Faction FactionID="@ch.FactionID"></Faction>
+                </td>
+            </tr>
+        }
+    </table>
+</div>
+
+@code {
+
+    [Parameter]
+    public TrackedPlayer Player { get; set; }
+
+}

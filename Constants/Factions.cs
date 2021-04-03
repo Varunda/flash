@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace watchtower.Constants {
 
-    public sealed class Faction {
+    public sealed class Factions {
 
         public static string UNKNOWN = "-1";
 

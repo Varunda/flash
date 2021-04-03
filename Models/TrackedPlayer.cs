@@ -8,17 +8,13 @@ namespace watchtower.Models {
 
     public class TrackedPlayer {
 
-        public string ID { get; set; } = "";
-
-        public int Index { get; set; }
-
-        public string CharacterName { get; set; } = "";
+        public int Index { get; set; } = 0;
 
         public string RunnerName { get; set; } = "";
 
         public int Score { get; set; } = 0;
 
-        public Character? Character { get; set; } = null;
+        public List<Character> Characters { get; set; } = new List<Character>();
 
         public List<KillEvent> Kills { get; set; } = new List<KillEvent>();
 

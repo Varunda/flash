@@ -5,7 +5,10 @@ using System.Threading.Tasks;
 
 namespace watchtower.Models {
 
-    public interface IBlockStore {
+    public class MatchSettings {
+
+        public int KillGoal { get; set; } = 100;
 
     }
+
 }

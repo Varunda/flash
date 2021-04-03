@@ -7,9 +7,7 @@
 @inject IEventBroadcastService _Events;
 @inject IMatchManager _Match;
 
-<!--
 <img src="/font/example.png" style="position:absolute; z-index: -10;" />
--->
 
 <div class="overlay-parent">
     <span class="overlay-name overlay-name-left">
@@ -99,9 +97,8 @@
     private TrackedPlayer? _player1 = null;
     private TrackedPlayer? _player2 = null;
 
-    private string _msg = "";
-
     private int _MatchLength;
+    private MatchSettings _MatchSettings;
 
     private double _p1KD;
     private double _p1KPM;
@@ -118,9 +115,12 @@
 
         _Events.OnPlayerUpdateEvent += OnPlayerUpdate;
         _Events.OnTimerEvent += OnTimerUpdate;
+        _Events.OnMatchSettingsEvent += OnSettingsUpdate;
 
         _player1 = _Match.GetPlayer(0);
         _player2 = _Match.GetPlayer(1);
+
+        _MatchSettings = _Match.GetSettings();
     }
 
     private void OnPlayerUpdate(object? sender, Ps2EventArgs<TrackedPlayer?> args) {
@@ -134,7 +134,7 @@
                 if (_player1.Kills.Count == 0) {
                     _p1Left = 0;
                 } else {
-                    int killsLeft = 100 - _player1.Score;
+                    int killsLeft = _MatchSettings.KillGoal - _player1.Score;
                     double left = Math.Round((double) killsLeft / (_p1KPM / 60));
                     _p1Left = (int) left;
                 }
@@ -147,7 +147,7 @@
                 if (_player2.Kills.Count == 0) {
                     _p2Left = 0;
                 } else {
-                    int killsLeft = 100 - _player2.Score;
+                    int killsLeft = _MatchSettings.KillGoal - _player2.Score;
                     double left = Math.Round((double) killsLeft / (_p2KPM / 60));
                     _p2Left = (int) left;
                 }
@@ -169,7 +169,7 @@
             if (_player1.Score == 0) {
                 _p1Left = 0;
             } else {
-                int killsLeft = 100 - _player1.Score;
+                int killsLeft = _MatchSettings.KillGoal - _player1.Score;
                 double left = Math.Round((double) killsLeft / (_p1KPM / 60));
                 _p1Left = (int) left;
             }
@@ -180,7 +180,7 @@
             if (_player2.Score == 0) {
                 _p2Left = 0;
             } else {
-                int killsLeft = 100 - _player2.Score;
+                int killsLeft = _MatchSettings.KillGoal - _player2.Score;
                 double left = Math.Round((double) killsLeft / (_p2KPM / 60));
                 _p2Left = (int) left;
             }
@@ -189,6 +189,10 @@
         InvokeAsync(() => {
             StateHasChanged();
         });
+    }
+
+    private void OnSettingsUpdate(object? sender, Ps2EventArgs<MatchSettings> args) {
+        _MatchSettings = args.Payload;
     }
 
 }

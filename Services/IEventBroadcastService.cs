@@ -25,5 +25,8 @@ namespace watchtower.Services {
         event EventHandler<Ps2EventArgs<MatchState>> OnMatchStateEvent;
         void EmitMatchStateEvent(MatchState state);
 
+        event EventHandler<Ps2EventArgs<MatchSettings>> OnMatchSettingsEvent;
+        void EmitMatchSettingsEvent(MatchSettings settings);
+
     }
 }

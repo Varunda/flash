@@ -35,7 +35,7 @@ namespace watchtower.Constants {
                     || loadoutID == NC_ENGINEER 
                     || loadoutID == NC_HEAVY_ASSAULT
                     || loadoutID == NC_MAX) {
-                return Faction.NC;
+                return Factions.NC;
             }
             if (loadoutID == VS_INFILTRATOR
                     || loadoutID == VS_LIGHT_ASSAULT
@@ -43,7 +43,7 @@ namespace watchtower.Constants {
                     || loadoutID == VS_ENGINEER 
                     || loadoutID == VS_HEAVY_ASSAULT
                     || loadoutID == VS_MAX) {
-                return Faction.VS;
+                return Factions.VS;
             }
             if (loadoutID == TR_INFILTRATOR
                     || loadoutID == TR_LIGHT_ASSAULT
@@ -51,10 +51,10 @@ namespace watchtower.Constants {
                     || loadoutID == TR_ENGINEER 
                     || loadoutID == TR_HEAVY_ASSAULT
                     || loadoutID == TR_MAX) {
-                return Faction.TR;
+                return Factions.TR;
             }
 
-            return Faction.UNKNOWN;
+            return Factions.UNKNOWN;
         }
 
     }

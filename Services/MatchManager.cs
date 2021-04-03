@@ -15,28 +15,30 @@ namespace watchtower.Services {
 
     public class MatchManager : IMatchManager {
 
-        private ILogger<MatchManager> _Logger;
+        private readonly ILogger<MatchManager> _Logger;
 
-        private ICharacterCollection _CharacterColleciton;
-        private IItemCollection _ItemCollection;
-        private IEventBroadcastService _Events;
-        private IRealtimeMonitor _Realtime;
+        private readonly ICharacterCollection _CharacterColleciton;
+        private readonly IItemCollection _ItemCollection;
+        private readonly IEventBroadcastService _Events;
+        private readonly IRealtimeMonitor _Realtime;
 
-        private Dictionary<int, TrackedPlayer> _Players = new Dictionary<int, TrackedPlayer>();
+        private readonly Dictionary<int, TrackedPlayer> _Players = new Dictionary<int, TrackedPlayer>();
 
         private MatchState _State = MatchState.UNSTARTED;
 
-        private Timer _MatchTimer;
+        private readonly Timer _MatchTimer;
         private DateTime _LastTimerTick = DateTime.UtcNow;
 
         private DateTime _MatchStart = DateTime.UtcNow;
         private DateTime? _MatchEnd = null;
 
+        private MatchSettings _Settings;
+
         public MatchManager(ILogger<MatchManager> logger,
                 ICharacterCollection charColl, IItemCollection itemColl,
                 IEventBroadcastService events, IRealtimeMonitor realtime) {
 
-            _Logger = logger;
+            _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             _CharacterColleciton = charColl ?? throw new ArgumentNullException(nameof(charColl));
             _ItemCollection = itemColl ?? throw new ArgumentNullException(nameof(itemColl));
@@ -44,132 +46,76 @@ namespace watchtower.Services {
             _Realtime = realtime ?? throw new ArgumentNullException(nameof(realtime));
 
             _MatchTimer = new Timer(1000D);
+            SetSettings(new MatchSettings());
 
             AddListeners();
         }
 
-        private async void KillHandler(object? sender, Ps2EventArgs<KillEvent> args) {
-            if (_State != MatchState.RUNNING) {
-                return;
-            }
-
-            KillEvent ev = args.Payload;
-
-            string sourceFactionID = Loadout.GetFaction(ev.LoadoutID);
-            string targetFactionID = Loadout.GetFaction(ev.TargetLoadoutID);
-
-            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players) {
-                int index = entry.Key;
-                TrackedPlayer player = entry.Value;
-
-                bool emit = false;
-
-                if (ev.SourceID == player.ID && ev.TargetID == player.ID) {
-                    _Logger.LogInformation($"Player {index} committed suicide");
-
-                    if (player.Streak > 1) {
-                        player.Streaks.Add(player.Streak);
-                        player.Streak = 0;
-                    }
-
-                    player.Deaths.Add(ev);
-
-                    emit = true;
-                } else if (player.ID == ev.SourceID) {
-                    if (sourceFactionID == targetFactionID) {
-                        _Logger.LogInformation($"Player {index}:{player.RunnerName} TK");
-                    } else {
-                        //_Logger.LogInformation($"Player {index}:{player.RunnerName} kill");
-                        player.Kills.Add(ev);
-
-                        PsItem? weapon = await _ItemCollection.GetByIDAsync(ev.WeaponID);
-                        if (weapon != null) {
-                            if (ItemCategory.IsValidSpeedrunnerWeapon(weapon) == true) {
-                                player.Streak += 1;
-                                player.Score += 1;
-                                player.ValidKills.Add(ev);
-                                _Logger.LogInformation($"Player {index}:{player.RunnerName} valid weapon, {weapon.Name}/{weapon.CategoryID}");
-
-                                if (player.Score == 100) {
-                                    _Logger.LogInformation($"Player {index}:{player.RunnerName} reached goal, ending match");
-                                    Stop();
-                                }
-                            } else {
-                                _Logger.LogInformation($"Player {index}:{player.RunnerName} invalid weapon, {weapon.Name}/{weapon.CategoryID}");
-                            }
-                        } else {
-                            _Logger.LogInformation($"Null weapon {ev.WeaponID}");
-                        }
-
-                        emit = true;
-                    }
-                } else if (player.ID == ev.TargetID) {
-                    _Logger.LogInformation($"Player {index}:{player.RunnerName} death");
-                    if (player.Streak > 1) {
-                        player.Streaks.Add(player.Streak);
-                    }
-                    player.Streak = 0;
-
-                    player.Deaths.Add(ev);
-
-                    emit = true;
-                } else {
-                    //_Logger.LogInformation($"Kill source:{ev.SourceID}, target:{ev.TargetID} was not {player.ID}");
-                }
-
-                if (emit == true) {
-                    _Events.EmitPlayerUpdateEvent(index, player);
-                }
-            }
-
+        private void AddListeners() {
+            _Events.OnKillEvent += KillHandler;
         }
 
-        public async Task SetPlayer(int index, string charName, string? playerName) {
-            if (playerName == "") {
-                playerName = null;
+        public async Task<bool> AddCharacter(int index, string charName) {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == false) {
+                player = new TrackedPlayer {
+                    Index = index,
+                    RunnerName = $"Runner {index + 1}"
+                };
+
+                _Players.Add(index, player);
             }
 
-            if (_Players.ContainsKey(index) == true) {
-                TrackedPlayer p = _Players[index];
-                if (playerName != null && p.CharacterName.ToLower() == charName.ToLower()) {
-                    p.RunnerName = playerName;
-                    _Events.EmitPlayerUpdateEvent(index, p);
-                    return;
-                }
+            Character? ch = await _CharacterColleciton.GetByNameAsync(charName);
+            if (ch == null) {
+                _Logger.LogWarning($"Failed to add character {charName} to Runner {index}, does not exist");
+                return false;
             }
 
-            Character? c = await _CharacterColleciton.GetByNameAsync(charName);
-            if (c == null) {
-                _Players.Remove(index);
-                _Events.EmitPlayerUpdateEvent(index, null);
-                return;
+            if (player.RunnerName == $"Runner {index + 1}") {
+                player.RunnerName = ch.Name;
             }
 
-            _Logger.LogInformation($"Loaded player {index}: {c.ID}/{c.Name}");
-
-            TrackedPlayer player = new TrackedPlayer() {
-                Character = c,
-                ID = c.ID,
-                CharacterName = c.Name,
-                RunnerName = playerName ?? c.Name,
-                Index = index
-            };
-
-            _Players[index] = player;
+            player.Characters.Add(ch);
 
             _Realtime.Subscribe(new Subscription() {
-                Characters = { c.ID },
+                Characters = { ch.ID },
                 Events = { "Death" }
             });
 
             _Events.EmitPlayerUpdateEvent(index, player);
+
+            return true;
+        }
+
+        public MatchSettings GetSettings() => _Settings;
+
+        public void SetSettings(MatchSettings settings) {
+            if (_State == MatchState.RUNNING) {
+                _Logger.LogWarning($"Match is currently running, some settings may create funky behavior");
+            }
+
+            _Settings = settings;
+
+            _Logger.LogInformation($"Match settings:" +
+                $"\n\tKillGoal: {_Settings.KillGoal}"
+            );
+
+            _Events.EmitMatchSettingsEvent(_Settings);
+        }
+
+        public void SetRunnerName(int index, string? runnerName) {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
+                player.RunnerName = runnerName ?? $"Runner {index + 1}";
+            } else {
+                _Logger.LogWarning($"Cannot set runner name for {index}, not in _Players");
+            }
         }
 
         public void SetScore(int index, int score) {
             if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 player.Score = score;
             } else {
-                _Logger.LogWarning($"Cannot set score of player {index}, _Players does not contain");
+                _Logger.LogWarning($"Cannot set score of runner {index}, _Players does not contain");
             }
         }
 
@@ -177,7 +123,7 @@ namespace watchtower.Services {
             if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 return player.Score;
             } else {
-                _Logger.LogWarning($"Cannot get score of player {index}, _Players does not contain");
+                _Logger.LogWarning($"Cannot get score of runner {index}, _Players does not contain");
                 return -1;
             }
         }
@@ -273,6 +219,8 @@ namespace watchtower.Services {
 
         public DateTime? GetMatchEnd() => null;
 
+        public List<TrackedPlayer> GetPlayers() => _Players.Values.ToList();
+
         public int GetMatchLength() {
             DateTime start = GetMatchStart();
             DateTime end = GetMatchEnd() ?? DateTime.UtcNow;
@@ -283,14 +231,82 @@ namespace watchtower.Services {
             return (int) (endSpan - startSpan).TotalSeconds;
         }
 
-        public List<TrackedPlayer> GetPlayers() => _Players.Values.ToList();
+        private async void KillHandler(object? sender, Ps2EventArgs<KillEvent> args) {
+            if (_State != MatchState.RUNNING) {
+                return;
+            }
 
-        private void AddListeners() {
-            _Events.OnKillEvent += KillHandler;
-        }
+            KillEvent ev = args.Payload;
 
-        private void RemoveListeners() {
-            _Events.OnKillEvent -= KillHandler;
+            string sourceFactionID = Loadout.GetFaction(ev.LoadoutID);
+            string targetFactionID = Loadout.GetFaction(ev.TargetLoadoutID);
+
+            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players) {
+                int index = entry.Key;
+                TrackedPlayer player = entry.Value;
+
+                bool emit = false;
+
+                foreach (Character c in player.Characters) {
+                    if (ev.SourceID == c.ID && ev.TargetID == c.ID) {
+                        _Logger.LogInformation($"Player {index} committed suicide");
+
+                        if (player.Streak > 1) {
+                            player.Streaks.Add(player.Streak);
+                            player.Streak = 0;
+                        }
+
+                        player.Deaths.Add(ev);
+
+                        emit = true;
+                    } else if (c.ID == ev.SourceID) {
+                        if (sourceFactionID == targetFactionID) {
+                            _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} TK");
+                        } else {
+                            //_Logger.LogInformation($"Player {index}:{player.RunnerName} kill");
+                            player.Kills.Add(ev);
+
+                            PsItem? weapon = await _ItemCollection.GetByIDAsync(ev.WeaponID);
+                            if (weapon != null) {
+                                if (ItemCategory.IsValidSpeedrunnerWeapon(weapon) == true) {
+                                    player.Streak += 1;
+                                    player.Score += 1;
+                                    player.ValidKills.Add(ev);
+                                    _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} valid weapon, {weapon.Name}/{weapon.CategoryID}");
+
+                                    if (player.Score >= _Settings.KillGoal) {
+                                        _Logger.LogInformation($"Player {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
+                                        Stop();
+                                    }
+                                } else {
+                                    _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} invalid weapon, {weapon.Name}/{weapon.CategoryID}");
+                                }
+                            } else {
+                                _Logger.LogInformation($"Null weapon {ev.WeaponID}");
+                            }
+
+                            emit = true;
+                        }
+                    } else if (c.ID == ev.TargetID) {
+                        _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} death");
+                        if (player.Streak > 1) {
+                            player.Streaks.Add(player.Streak);
+                        }
+                        player.Streak = 0;
+
+                        player.Deaths.Add(ev);
+
+                        emit = true;
+                    } else {
+                        //_Logger.LogInformation($"Kill source:{ev.SourceID}, target:{ev.TargetID} was not {player.ID}");
+                    }
+                }
+
+                if (emit == true) {
+                    _Events.EmitPlayerUpdateEvent(index, player);
+                }
+            }
+
         }
 
     }

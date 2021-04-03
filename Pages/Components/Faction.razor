@@ -1,0 +1,21 @@
+﻿
+@if (FactionID == "") {
+    <span>No faction</span>
+} else if (FactionID == "1") {
+    <span>VS</span>
+} else if (FactionID == "2") {
+    <span>NC</span>
+} else if (FactionID == "3") {
+    <span>TR</span>
+} else if (FactionID == "4") {
+    <span>NS</span>
+} else {
+    <span>Unknown @FactionID</span>
+}
+
+@code {
+
+    [Parameter]
+    public string FactionID { get; set; } = "";
+
+}
