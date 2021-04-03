@@ -222,6 +222,16 @@ namespace watchtower.Services {
         public void Restart() {
             _MatchStart = DateTime.UtcNow;
             _Events.EmitTimerEvent(0);
+
+            foreach (TrackedPlayer player in GetPlayers()) {
+                player.Score = 0;
+                player.Kills = new List<KillEvent>();
+                player.ValidKills = new List<KillEvent>();
+                player.Deaths = new List<KillEvent>();
+                player.Exp = new List<ExpEvent>();
+                player.Streak = 0;
+                player.Streaks = new List<int>();
+            }
         }
 
         public void Reset() {
@@ -242,11 +252,14 @@ namespace watchtower.Services {
             _MatchTimer.Stop();
             _MatchEnd = DateTime.UtcNow;
 
+            _Logger.LogInformation($"Match finished at {_MatchEnd}");
+
             SetState(MatchState.FINISHED);
         }
 
         private void SetState(MatchState state) {
             if (_State == state) {
+                _Logger.LogDebug($"Not setting match state to {state}, is the current one");
                 return;
             }
 

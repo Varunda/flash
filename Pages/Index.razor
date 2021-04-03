@@ -56,6 +56,12 @@
 
             @if (_player1 != null) {
                 <div>
+                    Name: @_player1.Character?.Name
+                </div>
+                <div>
+                    Runner: @_player1.RunnerName
+                </div>
+                <div>
                     ID: @_player1.ID
                 </div>
             }
@@ -100,6 +106,12 @@
 
             @if (_player2 != null) {
                 <div>
+                    Name: @_player2.Character?.Name
+                </div>
+                <div>
+                    Runner: @_player2.RunnerName
+                </div>
+                <div>
                     ID: @_player2.ID
                 </div>
             }
@@ -108,13 +120,32 @@
         <div class="col-6">
             <h2>Match controls</h2>
 
-            <div>
+            <div class="mb-4">
                 Current state: @_MatchState
             </div>
 
-            <button type="button" class="btn btn-primary" @onclick="StartMatch">Start</button>
+            <button type="button" class="btn btn-primary d-block" @onclick="() => _Match.Start()">Start</button>
+            <p>Start the match and timer</p>
 
-            <button type="button" class="btn btn-danger" @onclick="ResetMatch">Reset</button>
+            <button type="button" class="btn btn-danger d-block" @onclick="() => _Match.Reset()">Reset</button>
+            <p>Reset the match</p>
+
+            <button type="button" class="btn btn-warning d-block" @onclick="() => _Match.Restart()">Restart</button>
+            <p>Restart the match, resetting the scores</p>
+
+            <button type="button" class="btn btn-success d-block" @onclick="() => _Match.Pause()">Pause</button>
+            <p>Pause the match, not counting kills for a bit. This will mess with KPM</p>
+
+            <h4 class="my-2">Other pages:</h4>
+
+            <div>
+                <a href="/overlay" target="_blank">Overlay</a>
+            </div>
+
+            <div>
+                <a href="/graphs" target="_blank">Graph</a>
+            </div>
+
         </div>
     </div>
 </div>
