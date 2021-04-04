@@ -10,7 +10,6 @@
 @inject IEventBroadcastService _Events;
 
 <div class="container-fluid">
-
     <div class="row">
         <div class="col-12">
             <h1>Runner setup</h1>
@@ -187,6 +186,9 @@
 
         _Events.OnMatchStateEvent += OnMatchStateEvent;
         _Events.OnMatchSettingsEvent += OnMatchSettingsEvent;
+
+        _player1 = _Match.GetPlayer(0);
+        _player2 = _Match.GetPlayer(1);
     }
 
     private async Task AddToRunner1() {

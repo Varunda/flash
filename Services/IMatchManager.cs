@@ -59,6 +59,8 @@ namespace watchtower.Services {
         /// <returns>If the character was successfully added or not</returns>
         Task<bool> AddCharacter(int index, string charName);
 
+        void RemoveCharacter(int index, string charName);
+
         /// <summary>
         /// Set the name of a runner
         /// </summary>

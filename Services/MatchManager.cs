@@ -65,6 +65,13 @@ namespace watchtower.Services {
                 _Players.Add(index, player);
             }
 
+            foreach (Character c in player.Characters) {
+                if (c.Name.ToLower() == charName.ToLower()) {
+                    _Logger.LogWarning($"Not adding duplicate players {charName}");
+                    return true;
+                }
+            }
+
             Character? ch = await _CharacterColleciton.GetByNameAsync(charName);
             if (ch == null) {
                 _Logger.LogWarning($"Failed to add character {charName} to Runner {index}, does not exist");
@@ -85,6 +92,14 @@ namespace watchtower.Services {
             _Events.EmitPlayerUpdateEvent(index, player);
 
             return true;
+        }
+
+        public void RemoveCharacter(int index, string charName) {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
+                player.Characters = player.Characters.Where(iter => iter.Name.ToLower() != charName.ToLower()).ToList();
+            } else {
+                _Logger.LogWarning($"Cannot remove {charName} from player {index} cause it wasn't found");
+            }
         }
 
         public MatchSettings GetSettings() => _Settings;
@@ -184,6 +199,17 @@ namespace watchtower.Services {
             _MatchStart = DateTime.UtcNow;
             _Events.EmitTimerEvent(0);
             _MatchTimer.Stop();
+
+            foreach (TrackedPlayer player in GetPlayers()) {
+                player.Score = 0;
+                player.Kills = new List<KillEvent>();
+                player.ValidKills = new List<KillEvent>();
+                player.Deaths = new List<KillEvent>();
+                player.Exp = new List<ExpEvent>();
+                player.Streak = 0;
+                player.Streaks = new List<int>();
+                player.Characters = new List<Character>();
+            }
 
             SetState(MatchState.UNSTARTED);
         }

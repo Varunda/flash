@@ -49,6 +49,14 @@
                 @String.Format("{0,2:F2}", _avgStreak)
             </td>
         </tr>
+
+        <tr>
+            <td>Max streak</td>
+            <td>
+                @_maxStreak
+            </td>
+        </tr>
+
     </table>
 </div>
 
@@ -61,6 +69,7 @@
     private double _kd;
     private double _hsr;
     private double _avgStreak;
+    private int _maxStreak;
 
     protected override void OnInitialized() {
         base.OnInitialized();
@@ -73,6 +82,9 @@
 
         if (Player.Streaks.Count > 0) {
             foreach (int streak in Player.Streaks) {
+                if (streak > _maxStreak) {
+                    _maxStreak = streak;
+                }
                 _avgStreak += streak;
             }
             _avgStreak = _avgStreak / Player.Streaks.Count;

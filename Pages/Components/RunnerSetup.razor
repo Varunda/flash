@@ -1,4 +1,7 @@
-﻿
+﻿@using watchtower.Services
+
+@inject IMatchManager _Match  
+
 <div>
     <h5>Runner @(Player.Index + 1)</h5>
 
@@ -14,6 +17,7 @@
         <tr class="table-secondary">
             <th>Character name</th>
             <th>Faction</th>
+            <td></td>
         </tr>
 
         @foreach (Character ch in Player.Characters) {
@@ -26,6 +30,10 @@
                 </td>
                 <td>
                     <Faction FactionID="@ch.FactionID"></Faction>
+                </td>
+
+                <td @onclick="() => _Match.RemoveCharacter(Player.Index, ch.Name)">
+                    &times;
                 </td>
             </tr>
         }
