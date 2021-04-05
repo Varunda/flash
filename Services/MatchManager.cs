@@ -217,6 +217,8 @@ namespace watchtower.Services {
                 player.Streak = 0;
                 player.Streaks = new List<int>();
             }
+
+            SetState(MatchState.UNSTARTED);
         }
 
         public void ResetRound() {
