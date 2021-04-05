@@ -32,7 +32,7 @@ namespace watchtower.Services {
         private DateTime _MatchStart = DateTime.UtcNow;
         private DateTime? _MatchEnd = null;
 
-        private MatchSettings _Settings;
+        private MatchSettings _Settings = new MatchSettings();
 
         public MatchManager(ILogger<MatchManager> logger,
                 ICharacterCollection charColl, IItemCollection itemColl,
@@ -164,8 +164,8 @@ namespace watchtower.Services {
             _LastTimerTick = DateTime.UtcNow;
         }
 
-        public void Start() {
-            if (_State != MatchState.UNSTARTED) {
+        public void StartRound() {
+            if (_State == MatchState.RUNNING) {
                 _Logger.LogWarning($"Not starting match, already started");
                 return;
             }
@@ -180,8 +180,32 @@ namespace watchtower.Services {
             SetState(MatchState.RUNNING);
         }
 
-        public void Restart() {
+        public void ClearMatch() {
+            foreach (TrackedPlayer player in GetPlayers()) {
+                player.Score = 0;
+                player.Kills = new List<KillEvent>();
+                player.ValidKills = new List<KillEvent>();
+                player.Deaths = new List<KillEvent>();
+                player.Exp = new List<ExpEvent>();
+                player.Streak = 0;
+                player.Streaks = new List<int>();
+                player.Characters = new List<Character>();
+            }
+
+            _Players.Clear();
+
+            _MatchTimer.Stop();
+
+            SetState(MatchState.UNSTARTED);
+            _Events.EmitTimerEvent(0);
+
             _MatchStart = DateTime.UtcNow;
+            _MatchEnd = null;
+        }
+
+        public void RestartRound() {
+            _MatchStart = DateTime.UtcNow;
+            _MatchEnd = null;
             _Events.EmitTimerEvent(0);
 
             foreach (TrackedPlayer player in GetPlayers()) {
@@ -195,7 +219,7 @@ namespace watchtower.Services {
             }
         }
 
-        public void Reset() {
+        public void ResetRound() {
             _MatchStart = DateTime.UtcNow;
             _Events.EmitTimerEvent(0);
             _MatchTimer.Stop();
@@ -214,13 +238,13 @@ namespace watchtower.Services {
             SetState(MatchState.UNSTARTED);
         }
 
-        public void Pause() {
+        public void PauseRound() {
             _MatchTimer.Stop();
 
             SetState(MatchState.PAUSED);
         }
 
-        public void Stop() {
+        public void StopRound() {
             _MatchTimer.Stop();
             _MatchEnd = DateTime.UtcNow;
 
@@ -243,7 +267,7 @@ namespace watchtower.Services {
 
         public DateTime GetMatchStart() => _MatchStart;
 
-        public DateTime? GetMatchEnd() => null;
+        public DateTime? GetMatchEnd() => _MatchEnd;
 
         public List<TrackedPlayer> GetPlayers() => _Players.Values.ToList();
 
@@ -302,7 +326,7 @@ namespace watchtower.Services {
 
                                     if (player.Score >= _Settings.KillGoal) {
                                         _Logger.LogInformation($"Player {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
-                                        Stop();
+                                        StopRound();
                                     }
                                 } else {
                                     _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} invalid weapon, {weapon.Name}/{weapon.CategoryID}");

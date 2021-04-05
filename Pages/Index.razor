@@ -132,16 +132,19 @@
                 Current round: 0
             </div>
 
-            <button type="button" class="btn btn-primary d-block" @onclick="() => _Match.Start()">Start round</button>
+            <button type="button" class="btn btn-primary d-block" @onclick="() => _Match.StartRound()">Start round</button>
             <p>Start the match and timer</p>
 
-            <button type="button" class="btn btn-danger d-block" @onclick="() => _Match.Reset()">Reset round</button>
+            <button type="button" class="btn btn-primary d-block" @onclick="() => _Match.RestartRound()">New round</button>
+            <p>Start a new round</p>
+
+            <button type="button" class="btn btn-danger d-block" @onclick="() => _Match.ResetRound()">Reset round</button>
             <p>Reset the match</p>
 
-            <button type="button" class="btn btn-warning d-block" @onclick="() => _Match.Restart()">Restart round</button>
+            <button type="button" class="btn btn-warning d-block" @onclick="() => _Match.RestartRound()">Restart round</button>
             <p>Restart the match, resetting the scores</p>
 
-            <button type="button" class="btn btn-success d-block" @onclick="() => _Match.Pause()">Pause round</button>
+            <button type="button" class="btn btn-success d-block" @onclick="() => _Match.PauseRound()">Pause round</button>
             <p>Pause the match, not counting kills for a bit. This will mess with KPM</p>
 
             <h4 class="my-2">Other pages:</h4>

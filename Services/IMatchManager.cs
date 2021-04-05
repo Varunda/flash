@@ -12,27 +12,29 @@ namespace watchtower.Services {
         /// <summary>
         /// Start a match. If the match is already running, nothing happens
         /// </summary>
-        void Start();
+        void StartRound();
 
         /// <summary>
         /// Restart an existing match. If a match is not running, nothing happens
         /// </summary>
-        void Restart();
+        void RestartRound();
 
         /// <summary>
         /// Reset a match, clearing the runners
         /// </summary>
-        void Reset();
+        void ResetRound();
+
+        void ClearMatch();
 
         /// <summary>
         /// Pause a currently running match
         /// </summary>
-        void Pause();
+        void PauseRound();
 
         /// <summary>
-        /// Stop the current match. Does nothing if a match is already running
+        /// Stop the current match. Does nothing if a match isn't running
         /// </summary>
-        void Stop();
+        void StopRound();
 
         /// <summary>
         /// Get the current state of the match
