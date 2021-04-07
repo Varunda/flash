@@ -38,12 +38,6 @@ namespace watchtower {
                 //options.LogCensusErrors = true;
             });
 
-            /*
-            services.AddSignalR(options => {
-                options.EnableDetailedErrors = true;
-            });
-            */
-
             services.AddRazorPages();
             services.AddServerSideBlazor();
 
