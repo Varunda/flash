@@ -176,6 +176,7 @@ namespace watchtower.Services {
             _LastTimerTick = DateTime.UtcNow;
 
             _MatchStart = DateTime.UtcNow;
+            _MatchEnd = null;
 
             SetState(MatchState.RUNNING);
         }
@@ -223,6 +224,7 @@ namespace watchtower.Services {
 
         public void ResetRound() {
             _MatchStart = DateTime.UtcNow;
+            _MatchEnd = null;
             _Events.EmitTimerEvent(0);
             _MatchTimer.Stop();
 
