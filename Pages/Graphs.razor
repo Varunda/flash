@@ -9,7 +9,7 @@
 @inject ILogger<Graphs> _Logger 
 
 <div class="container-fluid">
-    <div class="row h-100" style="font-family: ps2; color: #e8b55c; background-color: #373737">
+    <div class="row h-100" style="font-family: ps2; color: #e8b55c;">
         <div class="col-3">
             @if (_player1 != null) {
                 <GraphPlayer Player="_player1"></GraphPlayer>
@@ -20,12 +20,12 @@
             }
         </div>
 
-        <div class="col-6 px-0" style="background-color: #373737">
-            <div style="text-align: center; background-color: #373737; font-size: 24pt;">
-                @(String.Format("{0,2:D2}:{1,2:D2}", (int) Math.Floor(_MatchLength / 60D), _MatchLength % 60))
+        <div class="col-6 px-0">
+            <div style="text-align: center; font-size: 24pt;">
+                <Timer Seconds="_MatchLength"></Timer>
             </div>
 
-            <PlotlyChart style="width: 100%; height: 500px; background-color: #373737;" @bind-Config="_config" @bind-Layout="_layout" @bind-Data="_data" @ref="chart"></PlotlyChart>
+            <PlotlyChart style="width: 100%; height: 500px;" @bind-Config="_config" @bind-Layout="_layout" @bind-Data="_data" @ref="chart"></PlotlyChart>
         </div>
 
         <div class="col-3">
@@ -42,7 +42,7 @@
 
 @code {
 
-    private PlotlyChart chart;
+    private PlotlyChart chart = default!;
     private Config _config = new Config() {
         Responsive = true
     };
@@ -51,15 +51,29 @@
     private IList<ITrace> _data = new List<ITrace>();
 
     private int _MatchLength = 0;
+    private MatchSettings _MatchSettings = default!;
 
     private TrackedPlayer? _player1 = null;
-
     private TrackedPlayer? _player2 = null;
+
+    private List<string> _DefaultColors = new List<string>() {
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#f7f7f7",
+        "#bcbd22",
+        "#17becf"
+    };
 
     protected override void OnInitialized() {
         base.OnInitialized();
 
         _MatchLength = _Match.GetMatchLength();
+        _MatchSettings = _Match.GetSettings();
 
         SetupChartData();
         SetupPlayerData();
@@ -87,7 +101,8 @@
                 new YAxis() {
                     Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title() { Text = "Kills" },
                     LineWidth = 5,
-                    Color = "#e8b55c"
+                    Color = "#e8b55c",
+                    Range = new List<object>() { 0, _MatchSettings.KillGoal }
                 }
             },
             XAxis = new List<XAxis>() {
@@ -136,7 +151,8 @@
             set.Mode = ModeFlag.Lines | ModeFlag.Markers;
             set.XAxis = "x1";
             set.Line = new Line() {
-                Width = 5
+                Width = 5,
+                Color = _DefaultColors[player.Index % _DefaultColors.Count]
             };
 
             List<object> X = new List<object>();
@@ -162,6 +178,36 @@
             set.Y = new List<object>(Y);
 
             sets.Add(set);
+
+            Scatter est = new Scatter();
+            est.Name = $"{player.RunnerName} pace";
+            est.Mode = ModeFlag.Lines;
+            est.XAxis = "x1";
+            est.Line = new Line() {
+                Width = 4,
+                Dash = "dot",
+                Color = _DefaultColors[player.Index % _DefaultColors.Count]
+            };
+
+            double kpm = ((double) player.Score / (double) _MatchLength) * 60D;
+            double pace = ((kpm == 0) ? (60) : (_MatchSettings.KillGoal / kpm));
+
+            est.X = new List<object>() {
+                0, pace
+            };
+            est.Y = new List<object>() {
+                0, _MatchSettings.KillGoal
+            };
+
+            int m = (int)Math.Floor(pace);
+            int s = ((int)(pace * 60D)) % 60;
+
+            _Logger.LogDebug($"Player {player.Index}/{player.RunnerName} kpm: {kpm}, pace: {pace}\n\tX: {String.Join(", ", est.X)}\n\tY: {String.Join(", ", est.Y)}\n\t{m}:{s}");
+
+            _layout.XAxis[0].TickVals.Add(pace);
+            _layout.XAxis[0].TickText.Add(String.Format("{0,2:D2}:{1,2:D2}", m, s));
+
+            sets.Add(est);
         }
 
         _data = new List<ITrace>(sets);

@@ -25,7 +25,7 @@
     </span>
 
     <span style="width: 100px; text-align: center; font-family: ps2-mono; display: inline-block;">
-        @(String.Format("{0,2:D2}:{1,2:D2}", (int) Math.Floor(_MatchLength / 60D), _MatchLength % 60))
+        <Timer Seconds="_MatchLength"></Timer>
     </span>
 
     <span class="overlay-score overlay-score-right">
@@ -100,7 +100,7 @@
     private TrackedPlayer? _player2 = null;
 
     private int _MatchLength;
-    private MatchSettings _MatchSettings;
+    private MatchSettings _MatchSettings = default!;
 
     private double _p1KD;
     private double _p1KPM;

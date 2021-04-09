@@ -129,6 +129,7 @@ namespace watchtower.Services {
         public void SetScore(int index, int score) {
             if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 player.Score = score;
+                _Events.EmitPlayerUpdateEvent(player.Index, player);
             } else {
                 _Logger.LogWarning($"Cannot set score of runner {index}, _Players does not contain");
             }

@@ -44,6 +44,19 @@
         </tr>
 
         <tr>
+            <td>Pace</td>
+            <td>
+                @if (Player.Score == 0) {
+                    <span>
+                        --:--
+                    </span>
+                } else {
+                    <Timer Seconds="_pace"></Timer>
+                }
+            </td>
+        </tr>
+
+        <tr>
             <td>Avg streak</td>
             <td>
                 @String.Format("{0,2:F2}", _avgStreak)
@@ -63,13 +76,14 @@
 @code {
 
     [Parameter]
-    public TrackedPlayer Player { get; set; }
+    public TrackedPlayer Player { get; set; } = default!;
 
     private double _kpm;
     private double _kd;
     private double _hsr;
     private double _avgStreak;
     private int _maxStreak;
+    private int _pace;
 
     protected override void OnInitialized() {
         base.OnInitialized();
@@ -79,6 +93,7 @@
         _kpm = (double) Player.Score / Math.Max(1D, (double) len) * 60D;
         _kd = (double) Player.Score / Math.Max(1D, (double) Player.Deaths.Count);
         _hsr = (((double) Math.Max(1, Player.ValidKills.Where(iter => iter.IsHeadshot == true).Count()) / ((double) Player.ValidKills.Count))) * 100;
+        _pace = (int) Math.Floor((((double) _Match.GetSettings().KillGoal) / _kpm) * 60);
 
         if (Player.Streaks.Count > 0) {
             foreach (int streak in Player.Streaks) {

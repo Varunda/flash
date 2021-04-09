@@ -1,0 +1,11 @@
+﻿
+<span>
+    @(String.Format("{0,2:D2}:{1,2:D2}", (int) Math.Floor(Seconds / 60D), Seconds % 60))
+</span>
+
+@code {
+
+    [Parameter]
+    public int Seconds { get; set; }
+
+}
