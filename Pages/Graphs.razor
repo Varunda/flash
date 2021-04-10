@@ -115,15 +115,16 @@
                     GridColor = "#cb9e51"
                 }
             },
-            PlotBgColor = "#373737",
-            PaperBgColor = "#373737",
+            PlotBgColor = "#00373737",
+            PaperBgColor = "#00373737",
             Legend = new Legend() {
                 Font = new Plotly.Blazor.LayoutLib.LegendLib.Font() {
                     Family = "ps2",
                     Color = "#e8b55c",
                     Size = 24
                 },
-                Orientation = Plotly.Blazor.LayoutLib.LegendLib.OrientationEnum.H
+                X = 0m,
+                Y = 1m
             }
         };
 
@@ -189,7 +190,7 @@
                 Color = _DefaultColors[player.Index % _DefaultColors.Count]
             };
 
-            double kpm = ((double) player.Score / (double) _MatchLength) * 60D;
+            double kpm = ((double) player.Score / Math.Max(1d, (double) _MatchLength)) * 60D;
             double pace = ((kpm == 0) ? (60) : (_MatchSettings.KillGoal / kpm));
 
             est.X = new List<object>() {

@@ -32,6 +32,9 @@ namespace watchtower.Services {
         private DateTime _MatchStart = DateTime.UtcNow;
         private DateTime? _MatchEnd = null;
 
+        private long _MatchTicks = 0;
+        const double TICKS_PER_SECOND = 10000000D;
+
         private MatchSettings _Settings = new MatchSettings();
 
         public MatchManager(ILogger<MatchManager> logger,
@@ -46,6 +49,7 @@ namespace watchtower.Services {
             _Realtime = realtime ?? throw new ArgumentNullException(nameof(realtime));
 
             _MatchTimer = new Timer(1000D);
+
             SetSettings(new MatchSettings());
 
             AddListeners();
@@ -53,6 +57,7 @@ namespace watchtower.Services {
 
         private void AddListeners() {
             _Events.OnKillEvent += KillHandler;
+            _MatchTimer.Elapsed += OnTimerTick;
         }
 
         public async Task<bool> AddCharacter(int index, string charName) {
@@ -156,11 +161,12 @@ namespace watchtower.Services {
 
             long nowTicks = time.Ticks;
             long prevTicks = _LastTimerTick.Ticks;
-            //_Logger.LogDebug($"Ticks: {nowTicks - prevTicks}");
 
-            long startTicks = _MatchStart.Ticks;
-            double ticksPerSecond = 10000000D;
-            _Events.EmitTimerEvent((int) Math.Round((nowTicks - startTicks) / ticksPerSecond));
+            _MatchTicks += nowTicks - prevTicks;
+
+            _Logger.LogDebug($"Total ticks: {_MatchTicks}, seconds {Math.Round(_MatchTicks / TICKS_PER_SECOND)}");
+
+            _Events.EmitTimerEvent((int)Math.Round(_MatchTicks / TICKS_PER_SECOND));
 
             _LastTimerTick = DateTime.UtcNow;
         }
@@ -172,12 +178,8 @@ namespace watchtower.Services {
             }
 
             _MatchTimer.AutoReset = true;
-            _MatchTimer.Elapsed += OnTimerTick;
             _MatchTimer.Start();
             _LastTimerTick = DateTime.UtcNow;
-
-            _MatchStart = DateTime.UtcNow;
-            _MatchEnd = null;
 
             SetState(MatchState.RUNNING);
         }
@@ -197,6 +199,7 @@ namespace watchtower.Services {
             _Players.Clear();
 
             _MatchTimer.Stop();
+            _MatchTicks = 0;
 
             SetState(MatchState.UNSTARTED);
             _Events.EmitTimerEvent(0);
@@ -208,6 +211,8 @@ namespace watchtower.Services {
         public void RestartRound() {
             _MatchStart = DateTime.UtcNow;
             _MatchEnd = null;
+            _MatchTicks = 0;
+
             _Events.EmitTimerEvent(0);
 
             foreach (TrackedPlayer player in GetPlayers()) {
@@ -226,6 +231,8 @@ namespace watchtower.Services {
         public void ResetRound() {
             _MatchStart = DateTime.UtcNow;
             _MatchEnd = null;
+            _MatchTicks = 0;
+
             _Events.EmitTimerEvent(0);
             _MatchTimer.Stop();
 
@@ -252,6 +259,7 @@ namespace watchtower.Services {
         public void StopRound() {
             _MatchTimer.Stop();
             _MatchEnd = DateTime.UtcNow;
+            _MatchTicks = 0;
 
             _Logger.LogInformation($"Match finished at {_MatchEnd}");
 
@@ -277,6 +285,8 @@ namespace watchtower.Services {
         public List<TrackedPlayer> GetPlayers() => _Players.Values.ToList();
 
         public int GetMatchLength() {
+            return (int)Math.Round(_MatchTicks / TICKS_PER_SECOND);
+            /*
             DateTime start = GetMatchStart();
             DateTime end = GetMatchEnd() ?? DateTime.UtcNow;
 
@@ -284,6 +294,7 @@ namespace watchtower.Services {
             TimeSpan endSpan = new TimeSpan(end.Ticks);
 
             return (int) (endSpan - startSpan).TotalSeconds;
+            */
         }
 
         private async void KillHandler(object? sender, Ps2EventArgs<KillEvent> args) {
