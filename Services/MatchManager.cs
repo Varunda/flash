@@ -164,7 +164,7 @@ namespace watchtower.Services {
 
             _MatchTicks += nowTicks - prevTicks;
 
-            _Logger.LogDebug($"Total ticks: {_MatchTicks}, seconds {Math.Round(_MatchTicks / TICKS_PER_SECOND)}");
+            //_Logger.LogDebug($"Total ticks: {_MatchTicks}, seconds {Math.Round(_MatchTicks / TICKS_PER_SECOND)}");
 
             _Events.EmitTimerEvent((int)Math.Round(_MatchTicks / TICKS_PER_SECOND));
 
@@ -175,6 +175,11 @@ namespace watchtower.Services {
             if (_State == MatchState.RUNNING) {
                 _Logger.LogWarning($"Not starting match, already started");
                 return;
+            }
+
+            if (_State == MatchState.UNSTARTED) {
+                _MatchTicks = 0;
+                _MatchStart = DateTime.UtcNow;
             }
 
             _MatchTimer.AutoReset = true;
@@ -259,7 +264,6 @@ namespace watchtower.Services {
         public void StopRound() {
             _MatchTimer.Stop();
             _MatchEnd = DateTime.UtcNow;
-            _MatchTicks = 0;
 
             _Logger.LogInformation($"Match finished at {_MatchEnd}");
 

@@ -28,6 +28,5 @@ namespace watchtower.Models {
         
         public List<int> Streaks { get; set; } = new List<int>();
 
-
     }
 }
