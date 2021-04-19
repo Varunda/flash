@@ -1,48 +1,148 @@
 ﻿@using watchtower.Services
 
 @inject IMatchManager _Match  
+@inject IAdminMessageBroadcastService _AdminMessages
 
 <div>
-    <h5>Runner @(Player.Index + 1)</h5>
+    <h2>Runner @(Index + 1)</h2>
 
-    <div class="mb-3">
-        <b>Name:</b> @Player.RunnerName
-    </div>
+    <EditForm Model="@_charName" OnValidSubmit="AddCharacter">
+        <div class="input-group">
+            <span class="input-group-prepend input-group-text">
+                Character
+            </span>
 
-    <div>
-        <b>Characters:</b>
-    </div>
+            <input type="text" class="form-control" @bind-value="_charName" disabled="@(_loading == true)" />
 
-    <table class="table table-sm">
-        <tr class="table-secondary">
-            <th>Character name</th>
-            <th>Faction</th>
-            <td></td>
-        </tr>
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-success">
+                    Add
+                </button>
+            </div>
+        </div>
+    </EditForm>
 
-        @foreach (Character ch in Player.Characters) {
-            <tr>
-                <td>
-                    @if (ch.OutfitName != null) {
-                        <text>[</text>@ch.OutfitTag<text>]</text>
-                    }
-                    @ch.Name
-                </td>
-                <td>
-                    <Faction FactionID="@ch.FactionID"></Faction>
-                </td>
+    <EditForm Model="@_teamName" OnValidSubmit="SetName">
+        <div class="input-group">
+            <span class="input-group-prepend input-group-text">
+                Name
+            </span>
 
-                <td @onclick="() => _Match.RemoveCharacter(Player.Index, ch.Name)">
-                    &times;
-                </td>
+            <input type="text" class="form-control" @bind-value="_teamName" />
+
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-primary">
+                    Update
+                </button>
+            </div>
+        </div>
+    </EditForm>
+
+    <hr />
+
+    @if (_player != null) {
+        <div class="mb-3">
+            <b>Name:</b> @_player.RunnerName
+        </div>
+
+        <div>
+            <b>Characters:</b>
+        </div>
+
+        <table class="table table-sm">
+            <tr class="table-secondary">
+                <th>Character name</th>
+                <th>Faction</th>
+                <td></td>
             </tr>
-        }
-    </table>
+
+            @foreach (Character ch in _player.Characters) {
+                <tr>
+                    <td>
+                        @if (ch.OutfitName != null) {
+                            <span>
+                                [@ch.OutfitTag]
+                            </span>
+                        }
+                        @ch.Name
+                    </td>
+                    <td>
+                        <Faction FactionID="@ch.FactionID"></Faction>
+                    </td>
+
+                    <td @onclick="() => _Match.RemoveCharacter(Index, ch.Name)">
+                        &times;
+                    </td>
+                </tr>
+            }
+        </table>
+
+        <div>
+            <b>Score adjustment</b>
+        </div>
+        <div class="btn-group w-100">
+            <button class="btn btn-success" type="button" @onclick="AddScore">
+                +1 Score
+            </button>
+
+            <button class="btn btn-danger" type="button" @onclick="RemoveScore">
+                -1 Score
+            </button>
+        </div>
+    } else {
+        <div>
+            No characters loaded
+        </div>
+    }
 </div>
 
 @code {
 
     [Parameter]
-    public TrackedPlayer Player { get; set; } = default!;
+    public int Index { get; set; }
+
+    private TrackedPlayer? _player;
+
+    private string _charName = "";
+    private string _teamName = "";
+
+    private bool _loading = false;
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+        _player = _Match.GetPlayer(Index);
+    }
+
+    private async Task AddCharacter() {
+        _loading = true;
+        if (await _Match.AddCharacter(Index, _charName) == true) {
+            _player = _Match.GetPlayer(Index);
+        }
+        _loading = false;
+
+        _charName = "";
+    }
+
+    private void SetName() {
+        _Match.SetRunnerName(Index, _teamName);
+    }
+
+    private void AddScore() {
+        if (_player == null) {
+            return;
+        }
+
+        _Match.SetScore(Index, _player.Score + 1);
+        _AdminMessages.EmitMessage($"Manually added score to {Index}:{_player.RunnerName}, score is {_player.Score}");
+    }
+
+    private void RemoveScore() {
+        if (_player == null) {
+            return;
+        }
+
+        _Match.SetScore(Index, _player.Score - 1);
+        _AdminMessages.EmitMessage($"Manually removed score from {Index}:{_player.RunnerName}, score is {_player.Score}");
+    }
 
 }

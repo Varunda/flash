@@ -1,0 +1,119 @@
+﻿@page "/"
+
+@using watchtower.Services
+@using watchtower.Models
+@using watchtower.Models.Events
+@using watchtower.Constants
+@using watchtower.Pages.Components
+@using watchtower.Pages.Setup
+
+@inject IMatchManager _Match
+@inject IEventBroadcastService _Events
+
+<div class="container-fluid">
+
+    <Header></Header>
+
+    <div class="row">
+        <div class="col-3">
+            <RunnerSetup Index="0"></RunnerSetup>
+        </div>
+
+        <div class="col-3">
+            <RunnerSetup Index="1"></RunnerSetup>
+        </div>
+
+        <div class="col-3">
+            <h2>Match settings</h2>
+
+            <div class="mb-4">
+                Kill goal: 
+
+                <EditForm Model="@_killGoal" OnValidSubmit="SetKillGoal">
+                    <div class="input-group">
+                        <input type="text" class="form-control" @bind-value="_killGoal" />
+
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary">
+                                Update
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+            <hr />
+
+            <div class="mb-2">
+                <MessageLog></MessageLog>
+            </div>
+
+            <AdminLog></AdminLog>
+
+        </div>
+
+        <div class="col-3">
+            <h2>Match controls</h2>
+
+            <div class="mb-4">
+                Current state: @_MatchState
+            </div>
+
+            <MatchControls></MatchControls>
+
+            <h4 class="my-2">Other pages:</h4>
+
+            <div>
+                <a href="/overlay" target="_blank">Overlay</a>
+            </div>
+
+            <div>
+                <a href="/graphs" target="_blank">Graph</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@code {
+
+    private MatchState _MatchState = MatchState.UNSTARTED;
+
+    private MatchSettings _MatchSettings = new MatchSettings();
+
+    private string _killGoal = "";
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _MatchState = _Match.GetState();
+        _MatchSettings = _Match.GetSettings();
+
+        _killGoal = _MatchSettings.KillGoal.ToString();
+
+        _Events.OnMatchStateEvent += OnMatchStateEvent;
+        _Events.OnMatchSettingsEvent += OnMatchSettingsEvent;
+    }
+
+    private void SetKillGoal() {
+        bool valid = Int32.TryParse(_killGoal, out int killGoal);
+
+        if (valid) {
+            _MatchSettings.KillGoal = killGoal;
+
+            _Match.SetSettings(_MatchSettings);
+        }
+    }
+
+    private void OnMatchStateEvent(object? sender, Ps2EventArgs<MatchState> args) {
+        _MatchState = args.Payload;
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void OnMatchSettingsEvent(object? sender, Ps2EventArgs<MatchSettings> args) {
+        _MatchSettings = args.Payload;
+    }
+
+}

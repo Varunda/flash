@@ -43,7 +43,7 @@ namespace watchtower.Constants {
         public static string Weapon = "207";
 
         public static List<string> SpeedrunnerWeapons = new List<string>() {
-            Knife, Pistol, Shotgun, SMG, LMG, AssaultRifle, Carbine, Sniper, BattleRifle,
+            Knife, Pistol, Shotgun, SMG, LMG, AssaultRifle, Carbine, Sniper, BattleRifle, ScoutRifle,
             RocketLauncher, HeavyWeapon, Grenade, Explosive, Crossbow, InfantryAbility, InfantryWeapons,
             AerialCombatWeapon, HybridRifle
         };

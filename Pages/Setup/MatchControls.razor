@@ -1,0 +1,20 @@
+﻿@using watchtower.Services
+
+@inject IMatchManager _Match
+
+<div>
+    <button type="button" class="btn btn-primary d-block" @onclick="() => _Match.StartRound()">Start round</button>
+    <p>Start the round and timer</p>
+
+    <button type="button" class="btn btn-primary d-block" @onclick="() => _Match.RestartRound()">Setup new round</button>
+    <p>Setup a new round, resetting the timer, kills, etc. Press start round to actually start it</p>
+
+    <button type="button" class="btn btn-danger d-block" @onclick="() => _Match.ClearMatch()">Reset match</button>
+    <p>Reset the match, clearing everything</p>
+
+    <button type="button" class="btn btn-warning d-block" @onclick="() => _Match.RestartRound()">Restart round</button>
+    <p>Restart the round, resetting the scores</p>
+
+    <button type="button" class="btn btn-success d-block" @onclick="() => _Match.PauseRound()">Pause round</button>
+    <p>Pause the round, not counting kills for a bit. This will mess with KPM</p>
+</div>

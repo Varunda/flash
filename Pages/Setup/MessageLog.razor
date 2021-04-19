@@ -1,0 +1,49 @@
+﻿@using watchtower.Services
+@using watchtower.Models.Events
+
+@inject IMatchMessageBroadcastService _MatchMessages
+
+<div style="border: 1px solid black; border-radius: 3px">
+    <h5 class="pl-1 py-1 mb-0 bg-secondary text-white">
+        Message log
+    </h5>
+
+    <div class="list-group list-group-flush" style="height: 300px; overflow-y: auto; overflow-x: auto; font-size: 10pt">
+        @foreach (Message msg in _messages) {
+            <div class="list-group-item p-1">
+                <span class="w-25 pr-2" style="font-weight: 600; font-family: monospace; vertical-align: top;">
+                    @msg.Timestamp.ToString("hh:mm:ss>")
+                </span>
+
+                <span class="w-75 d-inline-block p-0">
+                    @msg.Content
+                </span>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+
+    private List<Message> _messages = new List<Message>();
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _MatchMessages.OnMessageEvent += OnMessageHandler;
+
+        _messages = _MatchMessages.GetMessages();
+    }
+
+    private void OnMessageHandler(object? sender, Ps2EventArgs<string> args) {
+        _messages.Insert(0, new Message() {
+            Timestamp = args.CreatedTime,
+            Content = args.Payload
+        });
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+}

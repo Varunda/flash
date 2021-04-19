@@ -1,18 +1,20 @@
 ﻿@page "/graphs"
 
-@using watchtower.Models.Events; 
+@using watchtower.Models.Events;
 @using Plotly.Blazor.LayoutLib 
 @using Microsoft.Extensions.Logging
 @using watchtower.Pages.Components
+@using System.Diagnostics
 
 @inject IMatchManager _Match 
+@inject IEventBroadcastService _Events
 @inject ILogger<Graphs> _Logger 
 
 <div class="container-fluid">
     <div class="row h-100" style="font-family: ps2; color: #e8b55c;">
         <div class="col-3">
             @if (_player1 != null) {
-                <GraphPlayer Player="_player1"></GraphPlayer>
+                <GraphPlayer Player="_player1" @ref="Player1Component"></GraphPlayer>
             } else {
                 <div>
                     Runner 1 not set
@@ -30,7 +32,7 @@
 
         <div class="col-3">
             @if (_player2 != null) {
-                <GraphPlayer Player="_player2"></GraphPlayer>
+                <GraphPlayer Player="_player2" @ref="Player2Component"></GraphPlayer>
             } else {
                 <div>
                     Runner 2 not set
@@ -41,6 +43,9 @@
 </div>
 
 @code {
+
+    private GraphPlayer? Player1Component;
+    private GraphPlayer? Player2Component;
 
     private PlotlyChart chart = default!;
     private Config _config = new Config() {
@@ -69,13 +74,19 @@
         "#17becf"
     };
 
+    private Stopwatch _GraphRenderTimer = new Stopwatch();
+
     protected override void OnInitialized() {
         base.OnInitialized();
 
         _MatchLength = _Match.GetMatchLength();
         _MatchSettings = _Match.GetSettings();
 
-        SetupChartData();
+        _Events.OnTimerEvent += OnTimerUpdate;
+        _Events.OnPlayerUpdateEvent += OnPlayerUpdate;
+
+        SetupChartLayout();
+        UpdateChartData();
         SetupPlayerData();
     }
 
@@ -84,56 +95,16 @@
         _player2 = _Match.GetPlayer(1);
     }
 
-    private void SetupChartData() {
+    private void UpdateChartData() {
         int length = _Match.GetMatchLength();
         _Logger.LogInformation($"Match length: {length}");
-
-        _layout = new Layout() {
-            Title = new Title() {
-                Text = "Kills",
-                Font = new Plotly.Blazor.LayoutLib.TitleLib.Font() {
-                    Color = "#e8b55c",
-                    Family = "ps2",
-                    Size = 24
-                }
-            },
-            YAxis = new List<YAxis>() {
-                new YAxis() {
-                    Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title() { Text = "Kills" },
-                    LineWidth = 5,
-                    Color = "#e8b55c",
-                    Range = new List<object>() { 0, _MatchSettings.KillGoal }
-                }
-            },
-            XAxis = new List<XAxis>() {
-                new XAxis() {
-                    Title = new Plotly.Blazor.LayoutLib.XAxisLib.Title() { Text = "Time" },
-                    TickMode = Plotly.Blazor.LayoutLib.XAxisLib.TickModeEnum.Array,
-                    Tick0 = 0,
-                    LineWidth = 5,
-                    Color = "#e8b55c",
-                    GridColor = "#cb9e51"
-                }
-            },
-            PlotBgColor = "#00373737",
-            PaperBgColor = "#00373737",
-            Legend = new Legend() {
-                Font = new Plotly.Blazor.LayoutLib.LegendLib.Font() {
-                    Family = "ps2",
-                    Color = "#e8b55c",
-                    Size = 24
-                },
-                X = 0m,
-                Y = 1m
-            }
-        };
 
         _layout.XAxis[0].TickVals = new List<object>();
         _layout.XAxis[0].TickText = new List<object>();
         for (int i = 0; i < length; i += 60) {
             _layout.XAxis[0].TickVals.Add(Math.Floor(i / 60D));
             _layout.XAxis[0].TickText.Add($"{Math.Floor(i / 60D)}:00");
-            _Logger.LogTrace($"Adding tick at {i}");
+            //_Logger.LogTrace($"Adding tick at {i}");
         }
 
         _layout.XAxis[0].TickVals.Add((double) length / 60D);
@@ -146,7 +117,7 @@
         TimeSpan matchStart = new TimeSpan(_Match.GetMatchStart().Ticks);
 
         foreach (TrackedPlayer player in _Match.GetPlayers()) {
-            _Logger.LogDebug($"{player.RunnerName} has {player.Kills.Count} kills");
+            //_Logger.LogDebug($"{player.RunnerName} has {player.Kills.Count} kills");
             Scatter set = new Scatter();
             set.Name = player.RunnerName;
             set.Mode = ModeFlag.Lines | ModeFlag.Markers;
@@ -203,7 +174,7 @@
             int m = (int)Math.Floor(pace);
             int s = ((int)(pace * 60D)) % 60;
 
-            _Logger.LogDebug($"Player {player.Index}/{player.RunnerName} kpm: {kpm}, pace: {pace}\n\tX: {String.Join(", ", est.X)}\n\tY: {String.Join(", ", est.Y)}\n\t{m}:{s}");
+            _Logger.LogDebug($"Player {player.Index}/{player.RunnerName} kpm: {kpm}, pace: {pace}\n\tX: {String.Join(", ", est.X)}\n\tY: {String.Join(", ", est.Y)}\n\tPace time: {m}:{s}");
 
             _layout.XAxis[0].TickVals.Add(pace);
             _layout.XAxis[0].TickText.Add(String.Format("{0,2:D2}:{1,2:D2}", m, s));
@@ -213,15 +184,87 @@
 
         _data = new List<ITrace>(sets);
 
-        InvokeAsync(async () => {
-            await chart!.React();
+        _RenderGraph();
+    }
+
+    private void SetupChartLayout() {
+        _layout = new Layout() {
+            /*
+            Title = new Title() {
+                Text = "Kills",
+                Font = new Plotly.Blazor.LayoutLib.TitleLib.Font() {
+                    Color = "#e8b55c",
+                    Family = "ps2",
+                    Size = 24
+                }
+            },
+            */
+            Margin = new Margin() {
+                AutoExpand = true,
+                T = 0
+            },
+            YAxis = new List<YAxis>() {
+                new YAxis() {
+                    //Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title() { Text = "Kills" },
+                    LineWidth = 5,
+                    Color = "#e8b55c",
+                    Range = new List<object>() { 0, _MatchSettings.KillGoal },
+                }
+            },
+            XAxis = new List<XAxis>() {
+                new XAxis() {
+                    Title = new Plotly.Blazor.LayoutLib.XAxisLib.Title() { Text = "Time" },
+                    TickMode = Plotly.Blazor.LayoutLib.XAxisLib.TickModeEnum.Array,
+                    Tick0 = 0,
+                    LineWidth = 5,
+                    Color = "#e8b55c",
+                    GridColor = "#cb9e51",
+                }
+            },
+            PlotBgColor = "#00373737",
+            PaperBgColor = "#00373737",
+            Legend = new Legend() {
+                Font = new Plotly.Blazor.LayoutLib.LegendLib.Font() {
+                    Family = "ps2",
+                    Color = "#e8b55c",
+                    Size = 24
+                },
+                X = 0m,
+                Y = 1m
+            }
+        };
+    }
+
+    private void OnPlayerUpdate(object? sender, Ps2EventArgs<TrackedPlayer?> args) {
+        UpdateChartData();
+    }
+
+    private void OnTimerUpdate(object? sender, Ps2EventArgs<int> args) {
+        _MatchLength = args.Payload;
+
+        if (_MatchLength % 5 == 0) {
+            UpdateChartData();
+        }
+
+        InvokeAsync(() => {
+            StateHasChanged();
         });
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
         if (firstRender == true) {
-            await chart!.React();
+            await chart.React();
         }
+    }
+
+    private void _RenderGraph() {
+        _GraphRenderTimer.Reset();
+        _GraphRenderTimer.Start();
+        InvokeAsync(async () => {
+            await chart!.React();
+            _GraphRenderTimer.Stop();
+            _Logger.LogDebug($"Took {_GraphRenderTimer.ElapsedMilliseconds}ms to render graph");
+        });
     }
 
 }

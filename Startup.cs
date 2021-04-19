@@ -50,6 +50,8 @@ namespace watchtower {
 
             services.AddSingleton<IMatchManager, MatchManager>();
             services.AddSingleton<IEventBroadcastService, EventBroadcastService>();
+            services.AddSingleton<IMatchMessageBroadcastService, MatchMessageBroadcastService>();
+            services.AddSingleton<IAdminMessageBroadcastService, AdminMessageBroadcastService>();
 
             services.AddHostedService<HostedRealtimeMonitor>();
             services.AddHostedService<EventProcessService>();
@@ -59,7 +61,6 @@ namespace watchtower {
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env) { 
-
             if (env.IsDevelopment()) {
                app.UseDeveloperExceptionPage();
             }

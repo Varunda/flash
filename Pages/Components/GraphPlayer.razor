@@ -1,6 +1,8 @@
 ﻿@using watchtower.Services 
+@using watchtower.Models.Events
 
 @inject IMatchManager _Match
+@inject IEventBroadcastService _Event
 
 <div>
     <div style="border-bottom: 2px #e8b55c solid; font-size: 52pt; text-align: center;">
@@ -88,6 +90,13 @@
     protected override void OnInitialized() {
         base.OnInitialized();
 
+        _Event.OnPlayerUpdateEvent += OnPlayerUpdate;
+        _Event.OnTimerEvent += OnTimerUpdate;
+
+        UpdatePlayerStats();
+    }
+
+    private void UpdatePlayerStats() {
         int len = _Match.GetMatchLength();
 
         _kpm = (double) Player.Score / Math.Max(1D, (double) len) * 60D;
@@ -106,7 +115,28 @@
         } else {
             _avgStreak = 0;
         }
+    }
 
+    private void OnPlayerUpdate(object? sender, Ps2EventArgs<TrackedPlayer?> args) {
+        TrackedPlayer? runner = args.Payload;
+        if (runner == null) {
+            return;
+        }
+
+        if (runner.Index == Player.Index) {
+            Player = runner;
+            UpdatePlayerStats();
+            InvokeAsync(() => {
+                StateHasChanged();
+            });
+        }
+    }
+
+    private void OnTimerUpdate(object? sender, Ps2EventArgs<int> args) {
+        UpdatePlayerStats();
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
     }
 
 }
