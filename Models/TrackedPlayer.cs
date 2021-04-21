@@ -6,6 +6,9 @@ using watchtower.Models.Events;
 
 namespace watchtower.Models {
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class TrackedPlayer {
 
         public int Index { get; set; } = 0;

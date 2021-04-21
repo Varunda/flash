@@ -7,8 +7,9 @@ using watchtower.Models.Events;
 
 namespace watchtower.Services {
 
-    public interface IMatchMessageBroadcastService : IMessageBroadcastService {
-
-    }
+    /// <summary>
+    /// Message broadcast for match events, such as a team getting a kill
+    /// </summary>
+    public interface IMatchMessageBroadcastService : IMessageBroadcastService { }
 
 }

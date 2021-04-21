@@ -1,4 +1,5 @@
 ﻿@using watchtower.Services
+@using watchtower.Models.Events
 
 @inject IMatchManager _Match  
 @inject IAdminMessageBroadcastService _AdminMessages
@@ -132,7 +133,13 @@
             return;
         }
 
+        KillEvent ev = new KillEvent();
+        ev.Timestamp = DateTime.UtcNow;
+
+        _player.ValidKills.Add(ev);
+
         _Match.SetScore(Index, _player.Score + 1);
+
         _AdminMessages.EmitMessage($"Manually added score to {Index}:{_player.RunnerName}, score is {_player.Score}");
     }
 
