@@ -10,7 +10,12 @@ namespace watchtower.Services {
     public interface IMessageBroadcastService {
 
         event EventHandler<Ps2EventArgs<string>>? OnMessageEvent;
-        void EmitMessage(string msg);
+
+        event EventHandler<Ps2EventArgs<int>>? OnClearEvent; 
+
+        void Log(string msg);
+
+        void Clear();
 
         List<Message> GetMessages();
 

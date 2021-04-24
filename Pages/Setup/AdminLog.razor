@@ -37,8 +37,7 @@
         _messages = _AdminMessages.GetMessages();
 
         _AdminMessages.OnMessageEvent += OnMessageHandler;
-
-        _Logger.LogDebug($"AdminLog.OnInitalized");
+        _AdminMessages.OnClearEvent += OnClearHandler;
     }
 
     private void OnMessageHandler(object? sender, Ps2EventArgs<string> args) {
@@ -52,8 +51,17 @@
         });
     }
 
+    private void OnClearHandler(object? sender, Ps2EventArgs<int> args) {
+        _messages.Clear();
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
     public void Dispose() {
         _AdminMessages.OnMessageEvent -= OnMessageHandler;
+        _AdminMessages.OnClearEvent -= OnClearHandler;
     }
 
 }

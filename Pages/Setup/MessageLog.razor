@@ -3,6 +3,8 @@
 
 @inject IMatchMessageBroadcastService _MatchMessages
 
+@implements IDisposable
+
 <div style="border: 1px solid black; border-radius: 3px">
     <h5 class="pl-1 py-1 mb-0 bg-secondary text-white">
         Message log
@@ -31,6 +33,7 @@
         base.OnInitialized();
 
         _MatchMessages.OnMessageEvent += OnMessageHandler;
+        _MatchMessages.OnClearEvent += OnClearHandler;
 
         _messages = _MatchMessages.GetMessages();
     }
@@ -44,6 +47,15 @@
         InvokeAsync(() => {
             StateHasChanged();
         });
+    }
+
+    private void OnClearHandler(object? sender, Ps2EventArgs<int> args) {
+        _messages.Clear();
+    }
+
+    public void Dispose() {
+        _MatchMessages.OnMessageEvent -= OnMessageHandler;
+        _MatchMessages.OnClearEvent -= OnClearHandler;
     }
 
 }

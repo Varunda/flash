@@ -140,7 +140,7 @@
 
         _Match.SetScore(Index, _player.Score + 1);
 
-        _AdminMessages.EmitMessage($"Manually added score to {Index}:{_player.RunnerName}, score is {_player.Score}");
+        _AdminMessages.Log($"Manually added score to {Index}:{_player.RunnerName}, score is {_player.Score}");
     }
 
     private void RemoveScore() {
@@ -149,7 +149,7 @@
         }
 
         _Match.SetScore(Index, _player.Score - 1);
-        _AdminMessages.EmitMessage($"Manually removed score from {Index}:{_player.RunnerName}, score is {_player.Score}");
+        _AdminMessages.Log($"Manually removed score from {Index}:{_player.RunnerName}, score is {_player.Score}");
     }
 
 }

@@ -100,7 +100,7 @@ namespace watchtower.Services {
                 Events = { "Death" }
             });
 
-            _AdminMessages.EmitMessage($"Team {index}:{player.RunnerName} added character {charName}");
+            _AdminMessages.Log($"Team {index}:{player.RunnerName} added character {charName}");
 
             _Events.EmitPlayerUpdateEvent(index, player);
 
@@ -110,7 +110,7 @@ namespace watchtower.Services {
         public void RemoveCharacter(int index, string charName) {
             if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 player.Characters = player.Characters.Where(iter => iter.Name.ToLower() != charName.ToLower()).ToList();
-                _AdminMessages.EmitMessage($"Team {index}:{player.RunnerName} removed character {charName}");
+                _AdminMessages.Log($"Team {index}:{player.RunnerName} removed character {charName}");
             } else {
                 _Logger.LogWarning($"Cannot remove {charName} from player {index} cause it wasn't found");
             }
@@ -189,7 +189,7 @@ namespace watchtower.Services {
             if (_State == MatchState.UNSTARTED) {
                 _MatchTicks = 0;
                 _MatchStart = DateTime.UtcNow;
-                _AdminMessages.EmitMessage($"Match unstarted, resetting ticks and start");
+                _AdminMessages.Log($"Match unstarted, resetting ticks and start");
             }
 
             _MatchTimer.AutoReset = true;
@@ -198,7 +198,7 @@ namespace watchtower.Services {
 
             SetState(MatchState.RUNNING);
 
-            _AdminMessages.EmitMessage($"Match started at {_MatchStart}");
+            _AdminMessages.Log($"Match started at {_MatchStart}");
 
         }
 
@@ -225,7 +225,10 @@ namespace watchtower.Services {
             _MatchStart = DateTime.UtcNow;
             _MatchEnd = null;
 
-            _AdminMessages.EmitMessage($"Match cleared at {DateTime.UtcNow}");
+            _AdminMessages.Clear();
+            _MatchMessages.Clear();
+
+            _AdminMessages.Log($"Match cleared at {DateTime.UtcNow}");
         }
 
         public void RestartRound() {
@@ -234,6 +237,7 @@ namespace watchtower.Services {
             _MatchTicks = 0;
 
             _Events.EmitTimerEvent(0);
+            _MatchTimer.Stop();
 
             foreach (TrackedPlayer player in GetPlayers()) {
                 player.Score = 0;
@@ -247,7 +251,7 @@ namespace watchtower.Services {
 
             SetState(MatchState.UNSTARTED);
 
-            _AdminMessages.EmitMessage($"Match restarted at {DateTime.UtcNow}");
+            _AdminMessages.Log($"Match restarted at {DateTime.UtcNow}");
         }
 
         public void ResetRound() {
@@ -271,7 +275,7 @@ namespace watchtower.Services {
 
             SetState(MatchState.UNSTARTED);
 
-            _AdminMessages.EmitMessage($"Round reset at {DateTime.UtcNow}");
+            _AdminMessages.Log($"Round reset at {DateTime.UtcNow}");
         }
 
         public void PauseRound() {
@@ -279,7 +283,7 @@ namespace watchtower.Services {
 
             SetState(MatchState.PAUSED);
 
-            _AdminMessages.EmitMessage($"Round paused at {DateTime.UtcNow}");
+            _AdminMessages.Log($"Round paused at {DateTime.UtcNow}");
         }
 
         public void StopRound() {
@@ -287,7 +291,7 @@ namespace watchtower.Services {
             _MatchEnd = DateTime.UtcNow;
 
             _Logger.LogInformation($"Match finished at {_MatchEnd}");
-            _AdminMessages.EmitMessage($"Match stopped at {DateTime.UtcNow}");
+            _AdminMessages.Log($"Match stopped at {DateTime.UtcNow}");
 
             SetState(MatchState.FINISHED);
         }
@@ -333,7 +337,7 @@ namespace watchtower.Services {
                 foreach (Character c in player.Characters) {
                     if (ev.SourceID == c.ID && ev.TargetID == c.ID) {
                         _Logger.LogInformation($"Player {index} committed suicide");
-                        _MatchMessages.EmitMessage($"Team {index}:{player.RunnerName} @{c.Name} SUICIDE");
+                        _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} SUICIDE");
 
                         if (player.Streak > 1) {
                             player.Streaks.Add(player.Streak);
@@ -346,7 +350,7 @@ namespace watchtower.Services {
                     } else if (c.ID == ev.SourceID) {
                         if (sourceFactionID == targetFactionID) {
                             _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} TK");
-                            _MatchMessages.EmitMessage($"Team {index}:{player.RunnerName} @{c.Name} got a TK");
+                            _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} got a TK");
                         } else {
                             //_Logger.LogInformation($"Player {index}:{player.RunnerName} kill");
                             player.Kills.Add(ev);
@@ -358,19 +362,19 @@ namespace watchtower.Services {
                                     player.Score += 1;
                                     player.ValidKills.Add(ev);
                                     _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} valid weapon, {weapon.Name}/{weapon.CategoryID}");
-                                    _MatchMessages.EmitMessage($"Team {index}:{player.RunnerName} @{c.Name} VALID kill, {weapon.Name}/{weapon.CategoryID}, faction {targetFactionID}");
+                                    _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} VALID kill, {weapon.Name}/{weapon.CategoryID}, faction {targetFactionID}");
 
                                     if (player.Score >= _Settings.KillGoal) {
                                         _Logger.LogInformation($"Player {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
-                                        _MatchMessages.EmitMessage($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
+                                        _MatchMessages.Log($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
                                         StopRound();
                                     }
                                 } else {
                                     _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} invalid weapon, {weapon.Name}/{weapon.CategoryID}");
-                                    _MatchMessages.EmitMessage($"Team {index}:{player.RunnerName} @{c.Name} INVALID kill, {weapon.Name}/{weapon.CategoryID}, faction {targetFactionID}");
+                                    _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} INVALID kill, {weapon.Name}/{weapon.CategoryID}, faction {targetFactionID}");
                                 }
                             } else {
-                                _MatchMessages.EmitMessage($"Team {index}:{player.RunnerName} @{c.Name} UNKNOWN WEAPON {ev.WeaponID}, faction {targetFactionID}");
+                                _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} UNKNOWN WEAPON {ev.WeaponID}, faction {targetFactionID}");
                                 _Logger.LogInformation($"Null weapon {ev.WeaponID}");
                             }
 
@@ -385,7 +389,7 @@ namespace watchtower.Services {
                         player.Deaths.Add(ev);
 
                         _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} death");
-                        _MatchMessages.EmitMessage($"Team {index}:{player.RunnerName} @{c.Name} DEATH, faction {sourceFactionID}");
+                        _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} DEATH, faction {sourceFactionID}");
 
                         emit = true;
                     } else {

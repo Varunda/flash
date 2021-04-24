@@ -14,12 +14,20 @@ namespace watchtower.Services {
         public event EventHandler<Ps2EventArgs<string>>? OnMessageEvent;
         public delegate void MessageHandler(object? sender, string msg);
 
-        public void EmitMessage(string msg) {
+        public event EventHandler<Ps2EventArgs<int>>? OnClearEvent;
+        public delegate void ClearHandler(object? sender);
+
+        public void Log(string msg) {
             _Messages.Insert(0, new Message() {
                 Timestamp = DateTime.UtcNow,
                 Content = msg
             });
             OnMessageEvent?.Invoke(this, new Ps2EventArgs<string>(msg));
+        }
+
+        public void Clear() {
+            _Messages.Clear();
+            OnClearEvent?.Invoke(this, new Ps2EventArgs<int>(0));
         }
 
         public List<Message> GetMessages() => new List<Message>(_Messages);
