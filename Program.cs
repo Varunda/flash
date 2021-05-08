@@ -4,9 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using watchtower.Models;
 using watchtower.Services;
+using watchtower.Services.Db;
 
 namespace watchtower {
 
@@ -20,10 +23,24 @@ namespace watchtower {
         public static async Task Main(string[] args) {
             Console.WriteLine($"Starting at {DateTime.UtcNow}");
 
-            _ = Task.Run(() => {
-                IHostBuilder builder = CreateHostBuilder(args);
-                _Host = builder.Build();
-                _Host.Run();
+            _ = Task.Run(async () => {
+                try {
+                    IHostBuilder builder = CreateHostBuilder(args);
+                    _Host = builder.Build();
+
+                    using (IServiceScope? scope = _Host.Services.CreateScope()) {
+                        if (scope != null) {
+                            IDbCreator creator = scope.ServiceProvider.GetRequiredService<IDbCreator>();
+
+                            await creator.Execute();
+                            Console.WriteLine($"Executed IDbCreator");
+                        }
+                    }
+
+                    await _Host.RunAsync();
+                } catch (Exception ex) {
+                    Console.Error.WriteLine(ex.Message);
+                }
             });
 
             await Task.Delay(1000);
@@ -57,6 +74,9 @@ namespace watchtower {
             IHostBuilder? host = Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder => {
                     webBuilder.UseStartup<Startup>();
+                    webBuilder.ConfigureAppConfiguration(config => {
+                        config.AddUserSecrets<TwitchOptions>();
+                    });
                 });
 
             Console.WriteLine($"Created host");

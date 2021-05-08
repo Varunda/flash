@@ -1,17 +1,21 @@
 ﻿@page "/graphs"
 
 @using watchtower.Models.Events;
-@using Plotly.Blazor.LayoutLib 
-@using Microsoft.Extensions.Logging
-@using watchtower.Pages.Components
-@using System.Diagnostics
+@using Plotly.Blazor.LayoutLib;
+@using Microsoft.Extensions.Logging;
+@using watchtower.Pages.Components;
+@using System.Diagnostics;
 
 @inject IMatchManager _Match 
-@inject IEventBroadcastService _Events
+@inject IRealtimeEventBroadcastService _RealtimeEvents
+@inject IMatchEventBroadcastService _MatchEvents
+
 @inject ILogger<Graphs> _Logger 
 
+@implements IDisposable
+
 <div class="container-fluid">
-    <div class="row h-100" style="font-family: ps2; color: #e8b55c;">
+    <div class="row h-100" style="font-family: ps2; color: var(--color-primary)">
         <div class="col-3">
             @if (_player1 != null) {
                 <GraphPlayer Player="_player1" @ref="Player1Component"></GraphPlayer>
@@ -44,8 +48,8 @@
 
 @code {
 
-    private GraphPlayer? Player1Component;
-    private GraphPlayer? Player2Component;
+    private GraphPlayer? Player1Component = default;
+    private GraphPlayer? Player2Component = default;
 
     private PlotlyChart chart = default!;
     private Config _config = new Config() {
@@ -82,12 +86,17 @@
         _MatchLength = _Match.GetMatchLength();
         _MatchSettings = _Match.GetSettings();
 
-        _Events.OnTimerEvent += OnTimerUpdate;
-        _Events.OnPlayerUpdateEvent += OnPlayerUpdate;
+        _MatchEvents.OnTimerEvent += OnTimerUpdate;
+        _MatchEvents.OnPlayerUpdateEvent += OnPlayerUpdate;
 
         SetupChartLayout();
         UpdateChartData();
         SetupPlayerData();
+    }
+
+    public void Dispose() {
+        _MatchEvents.OnTimerEvent -= OnTimerUpdate;
+        _MatchEvents.OnPlayerUpdateEvent -= OnPlayerUpdate;
     }
 
     private void SetupPlayerData() {

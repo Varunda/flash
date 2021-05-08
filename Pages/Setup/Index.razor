@@ -8,7 +8,7 @@
 @using watchtower.Pages.Setup
 
 @inject IMatchManager _Match
-@inject IEventBroadcastService _Events
+@inject IMatchEventBroadcastService _MatchEvents
 
 <div class="container-fluid">
 
@@ -24,7 +24,7 @@
         </div>
 
         <div class="col-3">
-            <h2>Match settings</h2>
+            <h3>Match settings</h3>
 
             <div class="mb-4">
                 Kill goal: 
@@ -55,21 +55,11 @@
         <div class="col-3">
             <h2>Match controls</h2>
 
-            <div class="mb-4">
-                Current state: @_MatchState
-            </div>
+            <MatchOverview></MatchOverview>
+
+            <hr />
 
             <MatchControls></MatchControls>
-
-            <h4 class="my-2">Other pages:</h4>
-
-            <div>
-                <a href="/overlay" target="_blank">Overlay</a>
-            </div>
-
-            <div>
-                <a href="/graphs" target="_blank">Graph</a>
-            </div>
 
         </div>
     </div>
@@ -91,8 +81,8 @@
 
         _killGoal = _MatchSettings.KillGoal.ToString();
 
-        _Events.OnMatchStateEvent += OnMatchStateEvent;
-        _Events.OnMatchSettingsEvent += OnMatchSettingsEvent;
+        _MatchEvents.OnMatchStateEvent += OnMatchStateEvent;
+        _MatchEvents.OnMatchSettingsEvent += OnMatchSettingsEvent;
     }
 
     private void SetKillGoal() {

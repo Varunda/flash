@@ -1,5 +1,11 @@
 ﻿@import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
 
+:root {
+    --color-primary: #e8b55c;
+    --color-secondary: #373737;
+    --color-primary-muted: #8d8d8d;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
@@ -68,14 +74,14 @@ app {
 .sr-player {
     position: absolute;
     font-family: ps2;
-    border: 3px solid #e8b55c;
+    border: 3px solid var(--color-primary);
     border-radius: 6px;
-    background-color: #373737;
+    background-color: var(--color-secondary)
 }
 
 .sr-player-header {
     font-size: 52pt;
-    color: #e8b55c;
+    color: var(--color-primary);
 }
 
 .sr-left-align {
@@ -89,6 +95,52 @@ app {
 .sr-player-table {
     margin-bottom: 0;
     font-size: 24pt;
-    color: #e8b55c !important;
+    color: var(--color-primary) !important;
     width: unset !important;
+}
+
+.sr-border {
+    border: 3px var(--color-primary) solid;
+    border-radius: 6px;
+}
+
+.sr-border-bottom {
+    border-bottom: 3px var(--color-primary) solid;
+}
+
+.sr-vertical-center {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%);
+    text-align: center;
+}
+
+.sr-background {
+    background-color: var(--color-secondary);
+}
+
+.sr-background-primary {
+    background-color: var(--color-primary);
+}
+
+.sr-color {
+    color: var(--color-primary);
+}
+
+.sr-color-muted {
+    color: var(--color-primary-muted);
+}
+
+.sr-color-secondary {
+    color: var(--color-secondary);
+}
+
+.sr-h1 {
+    font-family: ps2;
+    font-size: 24pt;
+}
+
+.sr-h2 {
+    font-family: ps2;
+    font-size: 18pt;
 }

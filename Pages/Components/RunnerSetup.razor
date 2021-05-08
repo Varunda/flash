@@ -79,8 +79,9 @@
         </table>
 
         <div>
-            <b>Score adjustment</b>
+            <b>Score controls</b>
         </div>
+
         <div class="btn-group w-100">
             <button class="btn btn-success" type="button" @onclick="AddScore">
                 +1 Score
@@ -111,6 +112,7 @@
 
     protected override void OnInitialized() {
         base.OnInitialized();
+
         _player = _Match.GetPlayer(Index);
     }
 

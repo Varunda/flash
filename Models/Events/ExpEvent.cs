@@ -11,17 +11,17 @@ namespace watchtower.Models.Events {
 
         public DateTime Timestamp { get; set; }
 
-        public string LoadoutID { get; set; } = "";
+        public int LoadoutID { get; set; } 
 
-        public string ZoneID { get; set; } = "";
+        public int ZoneID { get; set; }
 
         public string TargetID { get; set; } = "";
 
-        public string ExpID { get; set; } = "";
+        public int ExpID { get; set; }
 
         public int Amount { get; set; }
 
-        public string WorldID { get; set; } = "";
+        public int WorldID { get; set; }
 
     }
 }

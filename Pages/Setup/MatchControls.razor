@@ -3,6 +3,8 @@
 @inject IMatchManager _Match
 
 <div>
+    <h4>Match controls</h4>
+
     <button type="button" class="btn btn-primary d-block" @onclick="() => _Match.StartRound()">Start round</button>
     <p>Start the round and timer</p>
 
@@ -16,5 +18,5 @@
     <p>Restart the round, resetting the scores</p>
 
     <button type="button" class="btn btn-success d-block" @onclick="() => _Match.PauseRound()">Pause round</button>
-    <p>Pause the round, not counting kills for a bit. This will mess with KPM</p>
+    <p>Pause the round, not counting kills for a bit</p>
 </div>

@@ -1,0 +1,107 @@
+﻿@using watchtower.Services
+@using watchtower.Code.Challenge
+@using watchtower.Models
+@using watchtower.Models.Events
+
+@inject IChallengeEventBroadcastService _ChallengeEvents
+@inject IChallengeManager _Challenges
+
+@implements IDisposable 
+
+<style>
+    #sr-challenge-parent.slide-in {
+        animation: active-slide-down 1s forwards;
+        z-index: -10;
+    }
+
+    #sr-challenge-parent.slide-out {
+        animation: active-slide-up 1s forwards;
+        z-index: -10;
+    }
+
+    @@keyframes active-slide-down {
+        0%      { top: -48px; }
+        100%    { top: 48px; }
+    }
+
+    @@keyframes active-slide-up {
+        0%      { top: 48px; }
+        100%    { top: -48px; }
+    }
+</style>
+
+@if (_ActiveChallenges.Count > 0) {
+    <div id="sr-challenge-parent" class="@GetCssClass()" style="width: fit-content;">
+        <div class="sr-h1">
+            Challenges:
+        </div>
+
+        @foreach (IndexedChallenge chall in _ActiveChallenges) {
+            <div>
+                <span class="sr-h2">
+                    @(chall.Challenge.Name):
+                </span>
+
+                <span>
+                    @chall.Challenge.Description
+                </span>
+            </div>
+        }
+    </div>
+}
+
+@code {        
+
+    private List<IndexedChallenge> _ActiveChallenges = new List<IndexedChallenge>();
+
+    private bool _IsChanging = false;
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _ChallengeEvents.OnChallengeStartEvent += OnChallengeStart;
+        _ChallengeEvents.OnChallengeEndedEvent += OnChallengeEnded;
+
+        List<IndexedChallenge> active = _Challenges.GetRunning();
+        foreach (IndexedChallenge c in active) {
+            _ActiveChallenges.Add(c);
+        }
+    }
+
+    private void OnChallengeStart(object? sender, Ps2EventArgs<IndexedChallenge> args) {
+        _IsChanging = false; // Prevent the delayed hide
+        _ActiveChallenges.Add(args.Payload);
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void OnChallengeEnded(object? sender, Ps2EventArgs<IndexedChallenge> args) {
+        _IsChanging = true;
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+
+        _ActiveChallenges = _ActiveChallenges.Where(iter => iter.Index != args.Payload.Index).ToList();
+        if (_ActiveChallenges.Count == 0) {
+            InvokeAsync(async () => {
+                await Task.Delay(1000);
+                if (_IsChanging == true) {
+                    StateHasChanged();
+                }
+            });
+        }
+    }
+
+    public void Dispose() {
+        _ChallengeEvents.OnChallengeStartEvent -= OnChallengeStart;
+        _ChallengeEvents.OnChallengeEndedEvent -= OnChallengeEnded;
+    }
+
+    private string GetCssClass() {
+        return $"px-2 py-1 sr-border sr-vertical-center sr-background sr-color {(_IsChanging == false ? "slide-in" : "slide-out")}";
+    }
+
+}
+

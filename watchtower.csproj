@@ -4,6 +4,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <Nullable>enable</Nullable>
     <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+    <UserSecretsId>0a62f18d-38a1-4707-b21d-afa2da7eb68a</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,11 +28,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.5" />
+    <PackageReference Include="Npgsql" Version="5.0.4" />
     <PackageReference Include="Plotly.Blazor" Version="1.5.0" />
+    <PackageReference Include="TwitchLib" Version="3.2.0" />
     <PackageReference Include="Websocket.Client" Version="4.3.21" />
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="libs\" />
     <Folder Include="wwwroot\js\" />
     <Folder Include="wwwroot\lib\" />
   </ItemGroup>

@@ -2,7 +2,7 @@
 @using watchtower.Models.Events
 
 @inject IMatchManager _Match
-@inject IEventBroadcastService _Event
+@inject IMatchEventBroadcastService _MatchEvent
 
 <div>
     <div style="border-bottom: 2px #e8b55c solid; font-size: 52pt; text-align: center;">
@@ -90,8 +90,8 @@
     protected override void OnInitialized() {
         base.OnInitialized();
 
-        _Event.OnPlayerUpdateEvent += OnPlayerUpdate;
-        _Event.OnTimerEvent += OnTimerUpdate;
+        _MatchEvent.OnPlayerUpdateEvent += OnPlayerUpdate;
+        _MatchEvent.OnTimerEvent += OnTimerUpdate;
 
         UpdatePlayerStats();
     }

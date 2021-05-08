@@ -17,6 +17,9 @@ using watchtower.Services;
 using Newtonsoft.Json.Linq;
 using watchtower.Models;
 using System.IO;
+using watchtower.Services.Db;
+using watchtower.Services.Hosted;
+using watchtower.Services.Implementations;
 
 namespace watchtower {
 
@@ -49,12 +52,23 @@ namespace watchtower {
             services.AddSingleton<ICommandBus, CommandBus>();
 
             services.AddSingleton<IMatchManager, MatchManager>();
-            services.AddSingleton<IEventBroadcastService, EventBroadcastService>();
+            services.AddSingleton<IChallengeManager, ChallengeManager>();
+            services.AddSingleton<IRealtimeEventBroadcastService, RealtimeEventBroadcastService>();
+            services.AddSingleton<ITwitchChatBroadcastService, TwitchChatBroadcastService>();
+            services.AddSingleton<IMatchEventBroadcastService, MatchEventBroadcastService>();
+            services.AddSingleton<IChallengeEventBroadcastService, ChallengeEventBroadcastService>();
             services.AddSingleton<IMatchMessageBroadcastService, MatchMessageBroadcastService>();
             services.AddSingleton<IAdminMessageBroadcastService, AdminMessageBroadcastService>();
 
+            services.AddSingleton<IDbHelper, DbHelper>();
+            services.AddSingleton<IDbCreator, DefaultDbCreator>();
+
             services.AddHostedService<HostedRealtimeMonitor>();
-            services.AddHostedService<EventProcessService>();
+            services.AddHostedService<HostedEventProcessService>();
+            services.AddHostedService<HostedTwitchEventService>();
+
+            services.Configure<DbOptions>(Configuration.GetSection("DbOptions"));
+            services.Configure<TwitchOptions>(Configuration.GetSection("Twitch"));
 
             Console.WriteLine($"Services configured");
         }

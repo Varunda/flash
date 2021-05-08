@@ -1,0 +1,197 @@
+﻿@using watchtower.Models
+@using watchtower.Models.Events
+@using watchtower.Services
+
+@inject IMatchEventBroadcastService _MatchEvents
+@inject IMatchManager _Match
+
+<!--
+<img src="/font/example.png" style="position:absolute; z-index: -10;" />
+-->
+
+<div class="overlay-parent sr-border sr-vertical-center">
+    <span class="overlay-name overlay-name-left">
+        @if (_player1 != null) {
+            @_player1.RunnerName
+        }
+    </span>
+
+    <span class="overlay-score overlay-score-left">
+        @if (_player1 != null) {
+            @_player1.Score
+        }
+    </span>
+
+    <span style="width: 100px; text-align: center; font-family: ps2-mono; display: inline-block;">
+        <Timer Seconds="_MatchLength"></Timer>
+    </span>
+
+    <span class="overlay-score overlay-score-right">
+        @if (_player2 != null) {
+            @_player2.Score
+        }
+    </span>
+
+    <span class="overlay-name overlay-name-right">
+        @if (_player2 != null) {
+            @_player2.RunnerName
+        }
+    </span>
+</div>
+
+<style>
+    .table td {
+        border-top: unset !important;
+    }
+
+    .overlay-parent {
+        font-family: ps2;
+        font-size: 24pt;
+        color: var(--color-primary);
+        background-color: var(--color-secondary);
+    }
+
+    .overlay-name {
+        width: 200px;
+        display: inline-block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: top;
+    }
+
+    .overlay-name-left {
+        text-align: start;
+        padding-left: 1rem;
+    }
+
+    .overlay-name-right {
+        text-align: end;
+        padding-right: 1rem;
+    }
+
+    .overlay-score {
+        display: inline-block;
+        width: 70px;
+        padding: 0 0.5rem;
+    }
+
+    .overlay-score-left {
+        border-right: 3px #e8b55c solid;
+        text-align: end;
+    }
+
+    .overlay-score-right {
+        border-left: 3px #e8b55c solid;
+        text-align: start;
+    }
+
+</style>
+
+@code {
+
+    private TrackedPlayer? _player1 = null;
+    private TrackedPlayer? _player2 = null;
+
+    private int _MatchLength;
+    private MatchSettings _MatchSettings = default!;
+
+    private double _p1KD;
+    private double _p1KPM;
+    private int _p1Left;
+    private double _p1HSR;
+
+    private double _p2KD;
+    private double _p2KPM;
+    private int _p2Left;
+    private double _p2HSR;
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _MatchEvents.OnPlayerUpdateEvent += OnPlayerUpdate;
+        _MatchEvents.OnTimerEvent += OnTimerUpdate;
+        _MatchEvents.OnMatchSettingsEvent += OnSettingsUpdate;
+
+        _player1 = _Match.GetPlayer(0);
+        _player2 = _Match.GetPlayer(1);
+
+        _MatchSettings = _Match.GetSettings();
+    }
+
+    private void OnPlayerUpdate(object? sender, Ps2EventArgs<TrackedPlayer?> args) {
+        TrackedPlayer? player = args.Payload;
+
+        /*
+        if (player != null) {
+            if (player.Index == 0) {
+                _player1 = player;
+
+                _p1KD = (double) _player1.Score / Math.Max(1D, (double) _player1.Deaths.Count);
+                if (_player1.Kills.Count == 0) {
+                    _p1Left = 0;
+                } else {
+                    int killsLeft = _MatchSettings.KillGoal - _player1.Score;
+                    double left = Math.Round((double) killsLeft / (_p1KPM / 60));
+                    _p1Left = (int) left;
+                }
+
+                _p1HSR = (((double) Math.Max(1, _player1.ValidKills.Where(iter => iter.IsHeadshot == true).Count()) / ((double) _player1.ValidKills.Count))) * 100;
+            } else if (player.Index == 1) {
+                _player2 = player;
+
+                _p2KD = (double) _player2.Score / Math.Max(2D, (double) _player2.Deaths.Count);
+                if (_player2.Kills.Count == 0) {
+                    _p2Left = 0;
+                } else {
+                    int killsLeft = _MatchSettings.KillGoal - _player2.Score;
+                    double left = Math.Round((double) killsLeft / (_p2KPM / 60));
+                    _p2Left = (int) left;
+                }
+
+                _p2HSR = (((double) Math.Max(1, _player2.ValidKills.Where(iter => iter.IsHeadshot == true).Count()) / ((double) _player2.ValidKills.Count))) * 100;
+            }
+        }
+        */
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void OnTimerUpdate(object? sender, Ps2EventArgs<int> args) {
+        _MatchLength = args.Payload;
+
+        /*
+        if (_player1 != null) {
+            _p1KPM = (double) _player1.ValidKills.Count / Math.Max(1D, (double) _MatchLength) * 60D;
+            if (_player1.Score == 0) {
+                _p1Left = 0;
+            } else {
+                int killsLeft = _MatchSettings.KillGoal - _player1.Score;
+                double left = Math.Round((double) killsLeft / (_p1KPM / 60));
+                _p1Left = (int) left;
+            }
+        }
+
+        if (_player2 != null) {
+            _p2KPM = (double) _player2.ValidKills.Count / Math.Max(1D, (double) _MatchLength) * 60D;
+            if (_player2.Score == 0) {
+                _p2Left = 0;
+            } else {
+                int killsLeft = _MatchSettings.KillGoal - _player2.Score;
+                double left = Math.Round((double) killsLeft / (_p2KPM / 60));
+                _p2Left = (int) left;
+            }
+        }
+        */
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void OnSettingsUpdate(object? sender, Ps2EventArgs<MatchSettings> args) {
+        _MatchSettings = args.Payload;
+    }
+
+}

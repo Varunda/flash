@@ -1,0 +1,183 @@
+﻿
+@using watchtower.Services
+@using watchtower.Models.Events
+@using watchtower.Pages.Components
+
+@inject IChallengeEventBroadcastService _ChallengeEvents
+@inject IChallengeManager _ChallengeManager 
+
+@implements IDisposable
+
+<style>
+    #sr-challenge-poll-parent.slide-in {
+        animation: poll-slide-down 1s forwards;
+        z-index: -10;
+    }
+
+    #sr-challenge-poll-parent.slide-out {
+        animation: poll-slide-up 1s forwards;
+        z-index: -10;
+    }
+
+    @@keyframes poll-slide-down {
+        0%      { top: -500px; }
+        100%    { top: 300px; }
+    }
+
+    @@keyframes poll-slide-up {
+        0%      { top: 300px; }
+        100%    { top: -500px; }
+    }
+</style>
+
+@if (_Display == true) {
+    <div id="sr-challenge-poll-parent" style="position: absolute; left: 0.25rem;" class="@GetCssClass()">
+        <div class="sr-h1 sr-border-bottom" style="text-align: center; width: 100%;">
+            Challenge poll!
+        </div>
+
+        <div class="sr-h1 sr-border-bottom" style="text-align: center; width: 100%;">
+            Timer:
+            <Timer Seconds="_TimerLeft"></Timer>
+        </div>
+
+        @if (_Results != null) {
+            <div class="list-group">
+                @foreach (KeyValuePair<int, ChallengePollResult> entry in _Results.Options) {
+                    <div class="list-group-item px-0 sr-border-bottom mb-0
+                         @(_Results.WinnerChallengeID == null ? "sr-color sr-background"
+                           : _Results.WinnerChallengeID == entry.Value.ChallengeID ? "sr-color-secondary sr-background-primary" : "sr-color-muted sr-background") ">
+
+                        <div class="row sr-h2">
+                            <div class="col-6">
+                                @entry.Key 
+                                | 
+                                @entry.Value.Challenge.Name
+                            </div>
+
+                            <div class="col-6">
+                                @entry.Value.Users.Count
+                                /
+                                @String.Format("{0,2:F2}%", 100 * ((double)entry.Value.Users.Count / (double)_Total))
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                @entry.Value.Challenge.Description
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="mt-2">
+            Vote by typing the number of the challenge in chat!
+        </div>
+
+    </div>
+}
+
+@code {        
+
+    private bool _Display = false;
+    private bool _CanVote = false;
+    private bool _IsChanging = false;
+
+    private bool _HasWinner = false;
+
+    private ChallengePollResults? _Results;
+    private int _TimerLeft;
+
+    private int _Total = 1;
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _ChallengeEvents.OnChallengePollTimerUpdateEvent += OnPollTimerUpdate;
+        _ChallengeEvents.OnChallengePollStartedEvent += OnPollStart;
+        _ChallengeEvents.OnChallengeResultsEndedEvent += OnPollEnded;
+        _ChallengeEvents.OnChallengeResultsUpdateEvent += OnPollUpdate;
+
+        _Results = _ChallengeManager.GetPollResults();
+        if (_Results != null) {
+            _TimerLeft = _ChallengeManager.GetPollTimer();
+
+            _Display = true;
+            _CanVote = true;
+        }
+    }
+
+    private string GetCssClass() {
+        return $"px-2 py-1 sr-border sr-background sr-color {(_IsChanging == false ? "slide-in" : "slide-out")}";
+    }
+
+    public void Dispose() {
+        _ChallengeEvents.OnChallengePollTimerUpdateEvent -= OnPollTimerUpdate;
+        _ChallengeEvents.OnChallengePollStartedEvent -= OnPollStart;
+        _ChallengeEvents.OnChallengeResultsEndedEvent -= OnPollEnded;
+        _ChallengeEvents.OnChallengeResultsUpdateEvent -= OnPollUpdate;
+    }
+
+    private void UpdateTotal() {
+        if (_Results == null) {
+            _Total = 1;
+        } else {
+            _Total = 0;
+            foreach (KeyValuePair<int, ChallengePollResult> entry in _Results.Options) {
+                _Total += entry.Value.Users.Count;
+            }
+            _Total = Math.Max(_Total, 1);
+        }
+    }
+
+    private void OnPollStart(object? sender, Ps2EventArgs<ChallengePollResults> args) {
+        _Results = args.Payload;
+        _Display = true;
+        _CanVote = true;
+        _IsChanging = false;
+
+        UpdateTotal();
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void OnPollUpdate(object? sender, Ps2EventArgs<ChallengePollResults> args) {
+        _Results = args.Payload;
+
+        UpdateTotal();
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void OnPollEnded(object? sender, Ps2EventArgs<ChallengePollResults> args) {
+        _Results = args.Payload;
+        _CanVote = false;
+
+        UpdateTotal();
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+
+        InvokeAsync(async () => {
+            await Task.Delay(5000);
+            _IsChanging = true;
+            StateHasChanged();
+
+            await Task.Delay(1000);
+            _Display = false;
+            StateHasChanged();
+        });
+    }
+
+    private void OnPollTimerUpdate(object? sender, Ps2EventArgs<int> args) {
+        _TimerLeft = args.Payload;
+    }
+
+}

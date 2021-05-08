@@ -11,19 +11,19 @@ namespace watchtower.Models.Events {
 
         public DateTime Timestamp { get; set; }
 
-        public string ZoneID { get; set; } = "";
+        public int ZoneID { get; set; }
 
-        public string LoadoutID { get; set; } = "";
+        public int LoadoutID { get; set; }
 
         public string TargetID { get; set; } = "";
 
-        public string TargetLoadoutID { get; set; } = "";
+        public int TargetLoadoutID { get; set; }
 
-        public string WeaponID { get; set; } = "";
+        public int WeaponID { get; set; }
 
         public bool IsHeadshot { get; set; }
 
-        public string WorldID { get; set; } = "";
+        public int WorldID { get; set; }
 
     }
 

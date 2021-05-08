@@ -1,0 +1,101 @@
+﻿@using watchtower.Services
+@using watchtower.Models
+@using watchtower.Models.Events
+@using watchtower.Constants
+@using watchtower.Pages.Components
+@using watchtower.Pages.Setup
+
+@inject IMatchManager _Match
+@inject IMatchEventBroadcastService _MatchEvents
+
+<div>
+    <h4>Match overview:</h4>
+
+    <table class="table table-sm">
+        <tr>
+            <td><b>State:</b></td>
+            <td>
+                @_MatchState
+            </td>
+        </tr>
+
+        <tr>
+            <td><b>Timer:</b></td>
+            <td>
+                <Timer Seconds="_MatchLength"></Timer>
+            </td>
+        </tr>
+
+        <tr>
+            <td><b>Team 1 score:</b></td>
+            <td>
+                @if (_player1 != null) {
+                    @_player1.Score
+                }
+            </td>
+        </tr>
+
+        <tr>
+            <td><b>Team 2 score:</b></td>
+            <td>
+                @if (_player2 != null) {
+                    @_player2.Score
+                }
+            </td>
+        </tr>
+    </table>
+</div>
+
+@code {
+
+    private TrackedPlayer? _player1 = null;
+    private TrackedPlayer? _player2 = null;
+
+    private MatchState _MatchState = MatchState.UNSTARTED;
+    private int _MatchLength = 0;
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _player1 = _Match.GetPlayer(0);
+        _player2 = _Match.GetPlayer(1);
+
+        _MatchState = _Match.GetState();
+        _MatchLength = _Match.GetMatchLength();
+
+        _MatchEvents.OnMatchStateEvent += OnMatchStateEvent;
+        _MatchEvents.OnPlayerUpdateEvent += OnPlayerUpdate;
+        _MatchEvents.OnTimerEvent += OnTimerTick;
+    }
+
+    private void OnMatchStateEvent(object? sender, Ps2EventArgs<MatchState> args) {
+        _MatchState = args.Payload;
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void OnTimerTick(object? sender, Ps2EventArgs<int> args) {
+        _MatchLength = args.Payload;
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void OnPlayerUpdate(object? sender, Ps2EventArgs<TrackedPlayer?> args) {
+        if (args.Payload == null) {
+            return;
+        }
+
+        if (args.Payload.Index == 0) {
+            _player1 = args.Payload;
+        } else if (args.Payload.Index == 1) {
+            _player2 = args.Payload;
+        }
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+}
