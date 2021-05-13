@@ -2,30 +2,28 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using watchtower.Constants;
 using watchtower.Models;
 using watchtower.Models.Events;
 
 namespace watchtower.Code.Challenge {
 
-    /// <summary>
-    /// Challenge for the next headshot gives 2x the points
-    /// </summary>
-    public class HeadshotChallenge : IRunChallenge {
+    public class SidearmChallenge : IRunChallenge {
 
-        public int ID => 1;
+        public int ID => 8;
 
-        public string Name => "SKULL CHASER";
+        public string Name => "Little gun, big dreams!";
 
-        public string Description => "Only headshot kills count for the next minute";
+        public string Description => "Only kills with sidearms count for the next 2 minutes";
 
         public int Multiplier => 2;
 
-        public int Duration => 60;
+        public int Duration => 120;
 
         public ChallengeDurationType DurationType => ChallengeDurationType.TIMED;
 
         public Task<bool> WasMet(KillEvent ev, PsItem? item) {
-            return Task.FromResult(ev.IsHeadshot == true);
+            return Task.FromResult(item != null && item.CategoryID == ItemCategory.Pistol);
         }
 
     }

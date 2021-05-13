@@ -39,5 +39,11 @@ namespace watchtower.Services.Implementations {
         public void EmitChallengePollTimerUpdate(int timeLeft) {
             OnChallengePollTimerUpdateEvent?.Invoke(this, new Ps2EventArgs<int>(timeLeft));
         }
+
+        public event EventHandler<Ps2EventArgs<IndexedChallenge>>? OnChallengeUpdateEvent;
+        public void EmitChallengeUpdate(IndexedChallenge challenge) {
+            OnChallengeUpdateEvent?.Invoke(this, new Ps2EventArgs<IndexedChallenge>(challenge));
+        }
+
     }
 }

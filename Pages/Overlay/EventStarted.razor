@@ -32,21 +32,44 @@
 
 @if (_ActiveChallenges.Count > 0) {
     <div id="sr-challenge-parent" class="@GetCssClass()" style="width: fit-content;">
-        <div class="sr-h1">
+        <div class="sr-h1 mb-n2">
             Challenges:
         </div>
 
-        @foreach (IndexedChallenge chall in _ActiveChallenges) {
-            <div>
-                <span class="sr-h2">
-                    @(chall.Challenge.Name):
-                </span>
+        <table class="table table-sm sr-color mb-0" style="text-align: left; line-height: 1.2">
+            @foreach (IndexedChallenge chall in _ActiveChallenges) {
+                <tr>
+                    <td>
+                        <b>
+                            @chall.Challenge.Name
+                        </b>
+                    </td>
 
-                <span>
-                    @chall.Challenge.Description
-                </span>
-            </div>
-        }
+                    <td>
+                        @chall.Challenge.Description
+                    </td>
+
+                    @if (chall.Challenge.DurationType == ChallengeDurationType.KILLS) {
+                        <td>
+                            @chall.KillCount
+                            /
+                            @chall.Challenge.Duration
+                        </td>
+                    } else if (chall.Challenge.DurationType == ChallengeDurationType.TIMED) {
+                        <td>
+                            <Timer Seconds="(int)Math.Round(chall.TickCount / 10000000D)">
+                            </Timer>
+                            /
+                            <Timer Seconds="chall.Challenge.Duration"></Timer>
+                        </td>
+                    } else {
+                        <td>
+                            Unknown type
+                        </td>
+                    }
+                </tr>
+            }
+        </table>
     </div>
 }
 
@@ -61,6 +84,7 @@
 
         _ChallengeEvents.OnChallengeStartEvent += OnChallengeStart;
         _ChallengeEvents.OnChallengeEndedEvent += OnChallengeEnded;
+        _ChallengeEvents.OnChallengeUpdateEvent += OnChallengeUpdate;
 
         List<IndexedChallenge> active = _Challenges.GetRunning();
         foreach (IndexedChallenge c in active) {
@@ -78,13 +102,14 @@
     }
 
     private void OnChallengeEnded(object? sender, Ps2EventArgs<IndexedChallenge> args) {
-        _IsChanging = true;
+        _ActiveChallenges = _ActiveChallenges.Where(iter => iter.Index != args.Payload.Index).ToList();
         InvokeAsync(() => {
             StateHasChanged();
         });
 
-        _ActiveChallenges = _ActiveChallenges.Where(iter => iter.Index != args.Payload.Index).ToList();
         if (_ActiveChallenges.Count == 0) {
+            _IsChanging = true;
+
             InvokeAsync(async () => {
                 await Task.Delay(1000);
                 if (_IsChanging == true) {
@@ -92,6 +117,19 @@
                 }
             });
         }
+    }
+
+    private void OnChallengeUpdate(object? sernder, Ps2EventArgs<IndexedChallenge> args) {
+        foreach (IndexedChallenge challenge in _ActiveChallenges) {
+            if (challenge.Index == args.Payload.Index) {
+                challenge.KillCount = args.Payload.KillCount;
+                challenge.TickCount = args.Payload.TickCount;
+            }
+        }
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
     }
 
     public void Dispose() {

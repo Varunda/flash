@@ -25,7 +25,7 @@ namespace watchtower.Models {
 
         public int KillCount { get; set; }
 
-        public DateTime StartTime { get; set; } = DateTime.UtcNow;
+        public long TickCount { get; set; }
 
         public IndexedChallenge(IRunChallenge challenge) {
             Challenge = challenge;

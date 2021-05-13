@@ -11,7 +11,7 @@
 
     <table class="table table-sm" style="color: #e8b55c; font-size: 24pt">
         <tr>
-            <td>Kills</td>
+            <td>Score</td>
             <td>
                 @Player.Score
             </td>
@@ -58,12 +58,14 @@
             </td>
         </tr>
 
+        <!--
         <tr>
             <td>Avg streak</td>
             <td>
                 @String.Format("{0,2:F2}", _avgStreak)
             </td>
         </tr>
+        -->
 
         <tr>
             <td>Max streak</td>
@@ -100,7 +102,7 @@
         int len = _Match.GetMatchLength();
 
         _kpm = (double) Player.Score / Math.Max(1D, (double) len) * 60D;
-        _kd = (double) Player.Score / Math.Max(1D, (double) Player.Deaths.Count);
+        _kd = (double) Player.ValidKills.Count / Math.Max(1D, (double) Player.Deaths.Count);
         _hsr = (((double) Math.Max(1, Player.ValidKills.Where(iter => iter.IsHeadshot == true).Count()) / ((double) Player.ValidKills.Count))) * 100;
         _pace = (int) Math.Floor((((double) _Match.GetSettings().KillGoal) / _kpm) * 60);
 

@@ -28,5 +28,8 @@ namespace watchtower.Services {
         event EventHandler<Ps2EventArgs<IndexedChallenge>> OnChallengeEndedEvent;
         void EmitChallengeEnded(IndexedChallenge challenge);
 
+        event EventHandler<Ps2EventArgs<IndexedChallenge>> OnChallengeUpdateEvent;
+        void EmitChallengeUpdate(IndexedChallenge challenge);
+
     }
 }

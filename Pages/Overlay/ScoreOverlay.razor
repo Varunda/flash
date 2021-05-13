@@ -95,6 +95,7 @@
     private int _MatchLength;
     private MatchSettings _MatchSettings = default!;
 
+    /*
     private double _p1KD;
     private double _p1KPM;
     private int _p1Left;
@@ -104,6 +105,7 @@
     private double _p2KPM;
     private int _p2Left;
     private double _p2HSR;
+    */
 
     protected override void OnInitialized() {
         base.OnInitialized();
@@ -121,11 +123,11 @@
     private void OnPlayerUpdate(object? sender, Ps2EventArgs<TrackedPlayer?> args) {
         TrackedPlayer? player = args.Payload;
 
-        /*
         if (player != null) {
             if (player.Index == 0) {
                 _player1 = player;
 
+                /*
                 _p1KD = (double) _player1.Score / Math.Max(1D, (double) _player1.Deaths.Count);
                 if (_player1.Kills.Count == 0) {
                     _p1Left = 0;
@@ -136,9 +138,11 @@
                 }
 
                 _p1HSR = (((double) Math.Max(1, _player1.ValidKills.Where(iter => iter.IsHeadshot == true).Count()) / ((double) _player1.ValidKills.Count))) * 100;
+                */
             } else if (player.Index == 1) {
                 _player2 = player;
 
+                /*
                 _p2KD = (double) _player2.Score / Math.Max(2D, (double) _player2.Deaths.Count);
                 if (_player2.Kills.Count == 0) {
                     _p2Left = 0;
@@ -149,9 +153,9 @@
                 }
 
                 _p2HSR = (((double) Math.Max(1, _player2.ValidKills.Where(iter => iter.IsHeadshot == true).Count()) / ((double) _player2.ValidKills.Count))) * 100;
+                */
             }
         }
-        */
 
         InvokeAsync(() => {
             StateHasChanged();

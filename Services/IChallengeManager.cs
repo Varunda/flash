@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using watchtower.Code;
 using watchtower.Code.Challenge;
 using watchtower.Models;
 
@@ -38,21 +39,25 @@ namespace watchtower.Services {
         /// </summary>
         void EndPoll();
 
+        /// <summary>
+        /// Get the current <see cref="ChallengeMode"/> being used
+        /// </summary>
+        ChallengeMode GetMode();
+
+        /// <summary>
+        /// Set the current <see cref="ChallengeMode"/>
+        /// </summary>
+        void SetMode(ChallengeMode mode);
+
+        /// <summary>
+        /// Get the current pull results, if any, null if not
+        /// </summary>
         ChallengePollResults? GetPollResults();
 
+        /// <summary>
+        /// How how much time is left on the challenge poll timer
+        /// </summary>
         int GetPollTimer();
-
-        /// <summary>
-        /// Add a challenge as allowed for a match
-        /// </summary>
-        /// <param name="challenge"></param>
-        void Add(int ID);
-
-        /// <summary>
-        /// Remove a challenge as allowed for a match
-        /// </summary>
-        /// <param name="ID"></param>
-        void Remove(int ID);
 
         /// <summary>
         /// Start running a challenge, and actively give out points for it

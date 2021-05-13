@@ -144,11 +144,13 @@
             X.Add(0);
             Y.Add(0);
 
-            foreach (KillEvent ev in player.ValidKills) {
+            foreach (ScoreEvent ev in player.Scores) {
+                index += ev.ScoreChange;
+
                 TimeSpan span = new TimeSpan(ev.Timestamp.Ticks);
                 double pos = ((double) ((span - matchStart).TotalSeconds)) / 60D;
                 X.Add(pos);
-                Y.Add(++index);
+                Y.Add(index);
             }
 
             // Add value at the end, useful if the match is currently running

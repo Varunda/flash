@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using watchtower.Models;
 using watchtower.Models.Events;
 
 namespace watchtower.Code.Challenge {
@@ -9,7 +10,7 @@ namespace watchtower.Code.Challenge {
     /// <summary>
     /// How does this challenge end?
     /// </summary>
-    public enum ChallengeType {
+    public enum ChallengeDurationType {
 
         /// <summary>
         /// The challenge is timed and will went after a period of time
@@ -30,14 +31,7 @@ namespace watchtower.Code.Challenge {
         /// </summary>
         /// <param name="ev"></param>
         /// <returns></returns>
-        Task<bool> WasMet(KillEvent ev);
-
-        /// <summary>
-        /// Check if a kill finishes the challenge
-        /// </summary>
-        /// <param name="ev"></param>
-        /// <returns></returns>
-        Task<bool> IsFinished(KillEvent ev);
+        Task<bool> WasMet(KillEvent ev, PsItem? item);
 
         /// <summary>
         /// Unique ID of the challenge. Unique per challenge, not per instance
@@ -59,7 +53,15 @@ namespace watchtower.Code.Challenge {
         /// </summary>
         int Multiplier { get; }
 
-        ChallengeType Type { get; }
+        /// <summary>
+        /// How long the challenger will last. If Type is TIMED, how many seconds, else how many kills
+        /// </summary>
+        int Duration { get; }
+
+        /// <summary>
+        /// How this challenge is counted, determines the end condition for it
+        /// </summary>
+        ChallengeDurationType DurationType { get; }
 
     }
 }

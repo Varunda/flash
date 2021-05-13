@@ -48,7 +48,7 @@
                          @(_Results.WinnerChallengeID == null ? "sr-color sr-background"
                            : _Results.WinnerChallengeID == entry.Value.ChallengeID ? "sr-color-secondary sr-background-primary" : "sr-color-muted sr-background") ">
 
-                        <div class="row sr-h2">
+                        <div class="row sr-h3">
                             <div class="col-6">
                                 @entry.Key 
                                 | 
@@ -171,8 +171,10 @@
             StateHasChanged();
 
             await Task.Delay(1000);
-            _Display = false;
-            StateHasChanged();
+            if (_IsChanging == true) {
+                _Display = false;
+                StateHasChanged();
+            }
         });
     }
 

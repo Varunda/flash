@@ -14,6 +14,8 @@ namespace watchtower.Services.Db {
         private readonly ILogger<DefaultDbCreator> _Logger;
         private readonly IDbHelper _DbHelper;
 
+        private readonly bool _RunDb = true;
+
         public DefaultDbCreator(ILogger<DefaultDbCreator> logger,
                 IDbHelper dbHelper) {
 
@@ -22,6 +24,10 @@ namespace watchtower.Services.Db {
         }
 
         public async Task Execute() {
+            if (_RunDb == false) {
+                return;
+            }
+
             try {
                 _Logger.LogInformation($"Getting current DB version");
                 int version = await GetVersion();

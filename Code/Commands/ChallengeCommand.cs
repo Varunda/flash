@@ -41,14 +41,6 @@ namespace watchtower.Commands {
             _Logger.LogInformation($"Active challenges:\n{String.Join("\n", challs.Select(iter => $"\t{iter.Index}@ {iter.Challenge.ID}/{iter.Challenge.Name}: {iter.Challenge.Description}"))}");
         }
 
-        public void Add(int ID) {
-            _Challenges.Add(ID);
-        }
-
-        public void Remove(int ID) {
-            _Challenges.Remove(ID);
-        }
-
         public void Start(int ID) {
             _Challenges.Start(ID);
         }
@@ -58,12 +50,9 @@ namespace watchtower.Commands {
         }
 
         public void Poll() {
-            _Challenges.Add(1);
-            _Challenges.Add(2);
-
             _Challenges.StartPoll(new ChallengePollOptions() {
                 Possible = new List<int>() { 1, 2 },
-                VoteTime = 10
+                VoteTime = 120
             });
         }
 

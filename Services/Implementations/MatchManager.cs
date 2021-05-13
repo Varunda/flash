@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 using watchtower.Census;
+using watchtower.Code;
 using watchtower.Constants;
 using watchtower.Models;
 using watchtower.Models.Census;
@@ -26,6 +27,7 @@ namespace watchtower.Services {
         private readonly IMatchMessageBroadcastService _MatchMessages;
         private readonly IAdminMessageBroadcastService _AdminMessages;
         private readonly IChallengeManager _Challenges;
+        private readonly IChallengeEventBroadcastService _ChallengeEvents;
 
         private readonly Dictionary<int, TrackedPlayer> _Players = new Dictionary<int, TrackedPlayer>();
 
@@ -45,7 +47,7 @@ namespace watchtower.Services {
         public MatchManager(ILogger<MatchManager> logger,
                 ICharacterCollection charColl, IItemCollection itemColl,
                 IRealtimeEventBroadcastService events, IMatchEventBroadcastService matchEvents,
-                IRealtimeMonitor realtime,
+                IRealtimeMonitor realtime, IChallengeEventBroadcastService challengeEvents,
                 IMatchMessageBroadcastService matchMessages, IAdminMessageBroadcastService adminMessages,
                 IChallengeManager challenges) {
 
@@ -57,6 +59,7 @@ namespace watchtower.Services {
             _Realtime = realtime ?? throw new ArgumentNullException(nameof(realtime));
             _RealtimeEvents = events ?? throw new ArgumentNullException(nameof(events));
             _MatchEvents = matchEvents ?? throw new ArgumentNullException(nameof(matchEvents));
+            _ChallengeEvents = challengeEvents ?? throw new ArgumentNullException(nameof(challengeEvents));
 
             _MatchMessages = matchMessages ?? throw new ArgumentNullException(nameof(matchMessages));
             _AdminMessages = adminMessages ?? throw new ArgumentNullException(nameof(adminMessages));
@@ -385,17 +388,39 @@ namespace watchtower.Services {
 
                                     List<IndexedChallenge> runningChallenges = _Challenges.GetRunning();
                                     foreach (IndexedChallenge challenge in runningChallenges) {
-                                        bool met = await challenge.Challenge.WasMet(ev);
-                                        if (met == true) {
-                                            _Logger.LogTrace($"Team {index}:{player.RunnerName} @{c.Name} met challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}, score mult {challenge.Challenge.Multiplier}");
-                                            score *= challenge.Challenge.Multiplier;
+                                        bool met = await challenge.Challenge.WasMet(ev, weapon);
+
+                                        if (_Challenges.GetMode() == ChallengeMode.MEAN) {
+                                            if (met == false) {
+                                                _Logger.LogTrace($"Team {index}:{player.RunnerName} @{c.Name} failed challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}");
+                                                score = 0;
+                                            } else {
+                                                challenge.KillCount += 1;
+                                                _ChallengeEvents.EmitChallengeUpdate(challenge);
+                                            }
+                                        } else if (_Challenges.GetMode() == ChallengeMode.NICE) {
+                                            if (met == true) {
+                                                challenge.KillCount += 1;
+                                                _ChallengeEvents.EmitChallengeUpdate(challenge);
+                                                _Logger.LogTrace($"Team {index}:{player.RunnerName} @{c.Name} met challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}, score mult {challenge.Challenge.Multiplier}");
+                                                score *= challenge.Challenge.Multiplier;
+                                            }
+                                        } else {
+                                            _Logger.LogError($"Unknown challenge mode {_Challenges.GetMode()}");
                                         }
 
-                                        bool isFinished = await challenge.Challenge.IsFinished(ev);
-                                        if (isFinished == true) {
+                                        if (challenge.Challenge.DurationType == Code.Challenge.ChallengeDurationType.KILLS && challenge.KillCount >= challenge.Challenge.Duration) {
                                             _Logger.LogDebug($"Team {index}:{player.RunnerName} @{c.Name} finished challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}");
                                             _Challenges.End(challenge.Index);
                                         }
+                                    }
+
+                                    if (score != 0) {
+                                        player.Scores.Add(new ScoreEvent() {
+                                            Timestamp = ev.Timestamp,
+                                            ScoreChange = score,
+                                            TotalScore = player.Score + score
+                                        });
                                     }
 
                                     player.Score += score;

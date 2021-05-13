@@ -1,0 +1,105 @@
+﻿@using watchtower.Code.Challenge
+
+@inject IChallengeEventBroadcastService _ChallengeEvents
+@inject IChallengeManager _ChallengeManager
+
+<div>
+    <h2>
+        Poll setup
+    </h2>
+
+    <table class="table mb-0">
+        @foreach (IRunChallenge challenge in _All) {
+            <tr>
+                <td>
+                    <b>@challenge.Name</b>
+                </td>
+
+                <td>
+                    @challenge.Description
+                </td>
+
+                <td>
+                    @if (_Options.Possible.Contains(challenge.ID) == false) {
+                        <button type="button" @onclick="() => AddOption(challenge.ID)" class="btn btn-success m-n2">
+                            Add
+                        </button>
+                    } else {
+                        <button type="button" @onclick="() => RemoveOption(challenge.ID)" class="btn btn-danger m-n2">
+                            Remove
+                        </button>
+                    }
+                </td>
+            </tr>
+        }
+    </table>
+
+    <div>
+        <b>Poll length:</b>
+    </div>
+
+    <EditForm Model="@_pollLength" OnValidSubmit="UpdatePollLength">
+        <div class="input-group mb-2">
+            <input type="text" class="form-control" @bind-value="_pollLength" />
+
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-primary">
+                    Update
+                </button>
+            </div>
+        </div>
+    </EditForm>
+
+    <button type="button" @onclick="() => StartPoll()" class="btn btn-primary w-100">
+        Start poll
+    </button>
+
+</div>
+
+@code {
+
+    private List<IRunChallenge> _All = new List<IRunChallenge>();
+
+    private ChallengePollOptions _Options = new ChallengePollOptions();
+
+    private string _pollLength = "";
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _All = _ChallengeManager.GetAll();
+
+        _pollLength = _Options.VoteTime.ToString();
+    }
+
+    private void StartPoll() {
+        _ChallengeManager.StartPoll(_Options);
+    }
+
+    private void UpdatePollLength() {
+        if (Int32.TryParse(_pollLength, out int len)) {
+            _Options.VoteTime = len;
+        }
+    }
+
+    private void AddOption(int ID) {
+        if (_Options.Possible.Contains(ID)) {
+            return;
+        }
+
+        _Options.Possible.Add(ID);
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void RemoveOption(int ID) {
+        _Options.Possible.Remove(ID);
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+}
