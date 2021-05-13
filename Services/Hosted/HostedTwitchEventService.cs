@@ -39,10 +39,15 @@ namespace watchtower.Services.Hosted {
 
             _TwitchEvents = new TwitchPubSub(twitchLogger);
 
-            ClientOptions options = new ClientOptions() { };
+            try {
+                ClientOptions options = new ClientOptions() { };
 
-            WebSocketClient socket = new WebSocketClient(options);
-            _TwitchClient = new TwitchClient(socket);
+                WebSocketClient socket = new WebSocketClient(options);
+                _TwitchClient = new TwitchClient(socket);
+            } catch (Exception ex) {
+                _Logger.LogError($"Error in HostedTwitchEventService: {ex}");
+                throw;
+            }
 
             _Options = twitchOptions;
         }
@@ -73,6 +78,7 @@ namespace watchtower.Services.Hosted {
             */
 
             _Logger.LogDebug($"Connecting to chat: {_Options.Value.ChatTargetChannel}");
+            _Logger.LogDebug($"{_Options.Value.ChatUsername}/{_Options.Value.ChatOAuth}");
 
             ConnectionCredentials creds = new ConnectionCredentials(_Options.Value.ChatUsername, _Options.Value.ChatOAuth);
             _TwitchClient.Initialize(creds);
@@ -111,7 +117,7 @@ namespace watchtower.Services.Hosted {
         }
 
         private void onError(object? sender, OnErrorEventArgs args) {
-            _Logger.LogError($"{args.Exception}");
+            _Logger.LogError($"Error received: {args.Exception.Message}");
         }
 
         private void onDisconnected(object? sender, OnDisconnectedEventArgs args) {
