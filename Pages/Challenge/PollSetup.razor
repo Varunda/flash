@@ -1,0 +1,154 @@
+﻿@using watchtower.Code.Challenge
+@using watchtower.Models.Events
+
+@inject IChallengeEventBroadcastService _ChallengeEvents
+@inject IChallengeManager _ChallengeManager
+
+<div>
+    <h2>
+        Poll setup
+    </h2>
+
+    <div class="w-100">
+        <div class="poll-table-container">
+            Active
+
+            <table class="table table-sm">
+                @foreach (IRunChallenge challenge in _Active) {
+                    <tr>
+                        <td>
+                            <b>@challenge.Name</b>
+                        </td>
+
+                        <td>
+                            @challenge.Description
+                        </td>
+
+                        <td>
+                            <button type="button" @onclick="() => RemoveOption(challenge.ID)" class="btn btn-danger m-n2">
+                                Remove
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </table>
+        </div>
+
+        <div class="poll-table-container">
+            Disabled
+
+            <table class="table table-sm">
+                @foreach (IRunChallenge challenge in _Disabled) {
+                    <tr>
+                        <td>
+                            <b>@challenge.Name</b>
+                        </td>
+
+                        <td>
+                            @challenge.Description
+                        </td>
+
+                        <td>
+                            <button type="button" @onclick="() => AddOption(challenge.ID)" class="btn btn-success m-n2">
+                                Add
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </table>
+        </div>
+    </div>
+
+    <hr />
+
+    <div>
+        <b>Poll length:</b>
+    </div>
+
+    <EditForm Model="@_Options" OnValidSubmit="UpdatePollLength">
+        <div class="input-group mb-2">
+            <InputNumber @bind-Value="_Options.VoteTime" class="form-control"></InputNumber>
+
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-primary">
+                    Update
+                </button>
+            </div>
+        </div>
+    </EditForm>
+
+    <hr />
+
+    <button type="button" @onclick="() => StartPoll()" class="btn btn-primary w-100">
+        Manual start
+    </button>
+
+</div>
+
+<style>
+    .poll-table-container {
+        height: 600px;
+        display: inline-block;
+        width: 49%;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+</style>
+
+@code {
+
+    private List<IRunChallenge> _All = new List<IRunChallenge>();
+
+    private List<IRunChallenge> _Active = new List<IRunChallenge>();
+    private List<IRunChallenge> _Disabled = new List<IRunChallenge>();
+
+    private ChallengePollOptions _Options = new ChallengePollOptions();
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _ChallengeEvents.OnActiveListUpdate += onActiveListUpdate;
+
+        updateActive();
+    }
+
+    private void updateActive() {
+        _All = _ChallengeManager.GetAll();
+        _Active = new List<IRunChallenge>();
+        _Disabled = new List<IRunChallenge>();
+
+        List<IRunChallenge> active = _ChallengeManager.GetActive();
+        foreach (IRunChallenge challenge in _All) {
+            if (active.FirstOrDefault(iter => iter.ID == challenge.ID) != null) {
+                _Active.Add(challenge);
+            } else {
+                _Disabled.Add(challenge);
+            }
+        }
+    }
+
+    private void onActiveListUpdate(object? sender, Ps2EventArgs<List<IRunChallenge>> args) {
+        updateActive();
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void StartPoll() {
+        _ChallengeManager.StartPoll(_Options);
+    }
+
+    private void UpdatePollLength() {
+        _Options.VoteTime = _Options.VoteTime;
+    }
+
+    private void AddOption(int ID) {
+        _ChallengeManager.AddActive(ID);
+    }
+
+    private void RemoveOption(int ID) {
+        _ChallengeManager.RemoveActive(ID);
+    }
+
+}

@@ -51,6 +51,10 @@ namespace watchtower.Services {
         /// <returns></returns>
         MatchSettings GetSettings();
 
+        void SetAutoChallengeSettings(AutoChallengeSettings settings);
+
+        AutoChallengeSettings GetAutoChallengeSettings();
+
         /// <summary>
         /// Add a new character to a runner. If no runner at the index has been set, a new runner is created
         /// </summary>

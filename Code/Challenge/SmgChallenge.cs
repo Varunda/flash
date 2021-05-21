@@ -8,13 +8,13 @@ using watchtower.Models.Events;
 
 namespace watchtower.Code.Challenge {
 
-    public class RocketChallenge : IRunChallenge {
+    public class SmgChallenge : IRunChallenge {
 
-        public int ID => 10;
+        public int ID => 12;
 
-        public string Name => "Rocketman";
+        public string Name => "CRUTCH";
 
-        public string Description => "Get kills with launchers";
+        public string Description => "Get kills with SMGs";
 
         public int Multiplier => 2;
 
@@ -23,7 +23,7 @@ namespace watchtower.Code.Challenge {
         public ChallengeDurationType DurationType => ChallengeDurationType.TIMED;
 
         public Task<bool> WasMet(KillEvent ev, PsItem? item) {
-            return Task.FromResult(item != null && item.CategoryID == ItemCategory.RocketLauncher);
+            return Task.FromResult(item != null && item.CategoryID == ItemCategory.SMG);
         }
 
     }

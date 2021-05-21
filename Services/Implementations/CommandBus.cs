@@ -50,7 +50,7 @@ namespace watchtower.Services {
 
             Type? cmdClass = _Commands.Find(iter => iter.Name.ToLower() == $"{args[0]}Command".ToLower() || iter.Name.ToLower() == args[0].ToLower());
             if (cmdClass == null) {
-                _Logger.LogWarning($"{args[0]} is not a valid command");
+                _Logger.LogWarning($"{args[0]} is not a valid command, type .list for a list of commands");
                 return;
             }
 
@@ -118,7 +118,8 @@ namespace watchtower.Services {
             msg.AppendLine("Commands available: ");
 
             foreach (Type cmdClass in _Commands) {
-                msg.Append(_PrintClassMethods(cmdClass));
+                msg.AppendLine($"{cmdClass.Name.Substring(0, cmdClass.Name.IndexOf("Command"))}");
+                msg.AppendLine(_PrintClassMethods(cmdClass));
             }
 
             Console.WriteLine(msg);
@@ -126,12 +127,11 @@ namespace watchtower.Services {
 
         private string _PrintClassMethods(Type clazz) {
             StringBuilder msg = new StringBuilder();
-            msg.AppendLine("Commands available: ");
             foreach (MethodInfo method in clazz.GetMethods()) {
                 if (method.IsStatic == true || method.IsPublic == false || method.IsVirtual == true || method.Name == "GetType") {
                     continue;
                 }
-                msg.AppendLine($"\t{clazz.Name} {method.Name} {String.Join(" ", method.GetParameters().Select(i => $"{i.Name}:{i.ParameterType.Name}"))}");
+                msg.AppendLine($"\t{method.Name} {String.Join(" ", method.GetParameters().Select(i => $"{i.Name}:{i.ParameterType.Name}"))}");
             }
             return msg.ToString();
         }

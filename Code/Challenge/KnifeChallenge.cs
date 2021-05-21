@@ -12,9 +12,9 @@ namespace watchtower.Code.Challenge {
 
         public int ID => 4;
 
-        public string Name => "Really... Now you're just bullying";
+        public string Name => "Good point!";
 
-        public string Description => "Next 5 kills must be with a knife";
+        public string Description => "Get kills with knives";
 
         public int Multiplier => 2;
 

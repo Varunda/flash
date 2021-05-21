@@ -13,7 +13,7 @@ namespace watchtower.Code.Challenge {
 
         public string Name => "TO THE MOON!";
 
-        public string Description => "Only C4 kills count for the next 2 minutes";
+        public string Description => "Get kills with C4";
 
         public int Multiplier => 2;
 

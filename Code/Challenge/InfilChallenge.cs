@@ -14,7 +14,7 @@ namespace watchtower.Code.Challenge {
 
         public string Name => "SNEAKY BEAKY LIKE";
 
-        public string Description => "Only kills as infil count for the next 2 minutes";
+        public string Description => "Get kills as an infil";
 
         public int Multiplier => 2;
 

@@ -92,10 +92,10 @@
     protected override void OnInitialized() {
         base.OnInitialized();
 
-        _ChallengeEvents.OnChallengePollTimerUpdateEvent += OnPollTimerUpdate;
-        _ChallengeEvents.OnChallengePollStartedEvent += OnPollStart;
-        _ChallengeEvents.OnChallengeResultsEndedEvent += OnPollEnded;
-        _ChallengeEvents.OnChallengeResultsUpdateEvent += OnPollUpdate;
+        _ChallengeEvents.OnPollTimerUpdate += OnPollTimerUpdate;
+        _ChallengeEvents.OnPollStarted += OnPollStart;
+        _ChallengeEvents.OnPollEnded += OnPollEnded;
+        _ChallengeEvents.OnPollResultsUpdate += OnPollUpdate;
 
         _Results = _ChallengeManager.GetPollResults();
         if (_Results != null) {
@@ -110,10 +110,10 @@
     }
 
     public void Dispose() {
-        _ChallengeEvents.OnChallengePollTimerUpdateEvent -= OnPollTimerUpdate;
-        _ChallengeEvents.OnChallengePollStartedEvent -= OnPollStart;
-        _ChallengeEvents.OnChallengeResultsEndedEvent -= OnPollEnded;
-        _ChallengeEvents.OnChallengeResultsUpdateEvent -= OnPollUpdate;
+        _ChallengeEvents.OnPollTimerUpdate -= OnPollTimerUpdate;
+        _ChallengeEvents.OnPollStarted -= OnPollStart;
+        _ChallengeEvents.OnPollEnded -= OnPollEnded;
+        _ChallengeEvents.OnPollResultsUpdate -= OnPollUpdate;
     }
 
     private void UpdateTotal() {

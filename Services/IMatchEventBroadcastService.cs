@@ -22,5 +22,8 @@ namespace watchtower.Services {
         event EventHandler<Ps2EventArgs<MatchSettings>>? OnMatchSettingsEvent;
         void EmitMatchSettingsEvent(MatchSettings settings);
 
+        event EventHandler<Ps2EventArgs<AutoChallengeSettings>> OnAutoSettingsChange;
+        void EmitAutoSettingsChange(AutoChallengeSettings settings);
+
     }
 }

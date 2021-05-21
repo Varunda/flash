@@ -16,7 +16,7 @@ namespace watchtower.Code.Challenge {
 
         public string Name => "SKULL CHASER";
 
-        public string Description => "Only headshot kills count for the next minute";
+        public string Description => "Get headshot kills";
 
         public int Multiplier => 2;
 

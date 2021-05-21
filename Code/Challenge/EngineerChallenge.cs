@@ -14,7 +14,7 @@ namespace watchtower.Code.Challenge {
 
         public string Name => "Nuts and bolts";
 
-        public string Description => "Only kills with engineer count";
+        public string Description => "Get kills as an engineer";
 
         public int Multiplier => 2;
 

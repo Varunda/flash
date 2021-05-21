@@ -82,9 +82,9 @@
     protected override void OnInitialized() {
         base.OnInitialized();
 
-        _ChallengeEvents.OnChallengeStartEvent += OnChallengeStart;
-        _ChallengeEvents.OnChallengeEndedEvent += OnChallengeEnded;
-        _ChallengeEvents.OnChallengeUpdateEvent += OnChallengeUpdate;
+        _ChallengeEvents.OnChallengeStart += OnChallengeStart;
+        _ChallengeEvents.OnChallengeEnded += OnChallengeEnded;
+        _ChallengeEvents.OnChallengeUpdate += OnChallengeUpdate;
 
         List<IndexedChallenge> active = _Challenges.GetRunning();
         foreach (IndexedChallenge c in active) {
@@ -133,8 +133,9 @@
     }
 
     public void Dispose() {
-        _ChallengeEvents.OnChallengeStartEvent -= OnChallengeStart;
-        _ChallengeEvents.OnChallengeEndedEvent -= OnChallengeEnded;
+        _ChallengeEvents.OnChallengeStart -= OnChallengeStart;
+        _ChallengeEvents.OnChallengeEnded -= OnChallengeEnded;
+        _ChallengeEvents.OnChallengeUpdate -= OnChallengeUpdate;
     }
 
     private string GetCssClass() {

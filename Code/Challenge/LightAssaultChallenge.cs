@@ -11,7 +11,7 @@ namespace watchtower.Code.Challenge {
 
         public int ID => 13;
 
-        public string Name => "LA";
+        public string Name => "A2G?";
 
         public string Description => "Get kills as LA";
 

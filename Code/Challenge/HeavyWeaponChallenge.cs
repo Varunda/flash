@@ -13,7 +13,7 @@ namespace watchtower.Code.Challenge {
 
         public string Name => "FACTION LOYALIST";
 
-        public string Description => "Only faction specific heavy weapon kills count for the next 2 minutes";
+        public string Description => "Get kills withfaction specific heavy weapon";
 
         public int Multiplier => 2;
 

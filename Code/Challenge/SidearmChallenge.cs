@@ -14,7 +14,7 @@ namespace watchtower.Code.Challenge {
 
         public string Name => "Little gun, big dreams!";
 
-        public string Description => "Only kills with sidearms count for the next 2 minutes";
+        public string Description => "Get kills with sidearms";
 
         public int Multiplier => 2;
 

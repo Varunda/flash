@@ -14,10 +14,10 @@ namespace watchtower.Services.Implementations {
 
     public class ChallengeManager : IChallengeManager {
 
+        private readonly ILogger<ChallengeManager> _Logger;
+
         private readonly IChallengeEventBroadcastService _ChallengeEvents;
         private readonly ITwitchChatBroadcastService _TwitchChat;
-
-        private readonly ILogger<ChallengeManager> _Logger;
 
         private ChallengeMode _Mode = ChallengeMode.NICE;
 
@@ -31,22 +31,17 @@ namespace watchtower.Services.Implementations {
         private int _PollTimerLeft = 0;
         private DateTime _TimerLastTick = DateTime.UtcNow;
         private long _PollTotalTicks = 0;
+
         private ChallengePollOptions? _PollOptions;
         private ChallengePollResults? _PollResults;
 
-        private Timer _TickTimer = new Timer();
-        private DateTime _TickLastTick = DateTime.UtcNow;
-
         public ChallengeManager(ILogger<ChallengeManager> logger,
-            IChallengeEventBroadcastService challengeEvents, ITwitchChatBroadcastService twitchChat) {
+                IChallengeEventBroadcastService challengeEvents, ITwitchChatBroadcastService twitchChat) { 
 
-            logger.LogInformation($"ctor");
+            _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             _ChallengeEvents = challengeEvents ?? throw new ArgumentNullException(nameof(challengeEvents));
             _TwitchChat = twitchChat ?? throw new ArgumentNullException(nameof(twitchChat));
-
-            _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _Logger.LogDebug($"starting challenge manager");
 
             LoadChallenges();
             _Logger.LogInformation($"Loaded challenges:\n{String.Join("\n", _AllChallenges.Select(iter => $"\t{iter.ID}/{iter.Name}: {iter.Description}"))}");
@@ -56,44 +51,43 @@ namespace watchtower.Services.Implementations {
             _PollTimer.Interval = 1000;
             _PollTimer.AutoReset = true;
             _PollTimer.Elapsed += OnTimerTick;
-
-            _TickTimer.Interval = 1000;
-            _TickTimer.AutoReset = true;
-            _TickTimer.Elapsed += OnDurationTick;
-            _TickTimer.Start();
         }
 
-        private void OnTwitchChat(object? sender, Ps2EventArgs<TwitchChatMessage> args) {
-            if (_IsPollRunning == false) {
+        public void Start(int ID) {
+            IRunChallenge? chall = _ActiveChallenges.FirstOrDefault(iter => iter.ID == ID);
+            if (chall == null) {
+                _Logger.LogWarning($"Cannot start challenge {ID}, is not active, or does not exist");
                 return;
             }
 
-            if (_PollResults == null) {
-                _Logger.LogWarning($"_PollResults is null, while _IsPollRunning is true and during OnTwitchChat");
+            IndexedChallenge? running = _RunningChallenges.FirstOrDefault(iter => iter.Challenge.ID == ID);
+            if (running != null) {
+                _Logger.LogWarning($"Not adding repeat challenge {chall.ID}/{chall.Name}");
                 return;
             }
 
-            TwitchChatMessage msg = args.Payload;
+            IndexedChallenge newChall = new IndexedChallenge(chall);
+            _RunningChallenges.Add(newChall);
+            _Logger.LogInformation($"Started new challenge {newChall.Challenge.ID}/{newChall.Challenge.Name}, index {newChall.Index}");
+            _ChallengeEvents.EmitChallengeStart(newChall);
+        }
 
-            if (Int32.TryParse(msg.Message, out int voteOption) == true) {
-                foreach (KeyValuePair<int, ChallengePollResult> entry in _PollResults.Options) {
-                    if (entry.Value.Users.Contains(msg.Username)) {
-                        entry.Value.Users.Remove(msg.Username);
-                    }
-                }
-
-                if (_PollResults.Options.TryGetValue(voteOption, out ChallengePollResult? result) == true) {
-                    result.Users.Add(msg.Username);
-                    _Logger.LogTrace($"{msg.Username} voted for option {voteOption}");
-                } else {
-                    _Logger.LogTrace($"{msg.Username} used invalid option {voteOption}");
-                }
+        public void End(int index) {
+            IndexedChallenge? running = _RunningChallenges.FirstOrDefault(iter => iter.Index == index);
+            if (running == null) {
+                _Logger.LogWarning($"Cannot end running challenge index {index}, index not found");
+                return;
             }
+
+            _ChallengeEvents.EmitChallengeEnded(running);
+            _RunningChallenges = _RunningChallenges.Where(iter => iter.Index != index).ToList();
+            _Logger.LogInformation($"Ended running challenge {running.Challenge.ID}/{running.Challenge.Name}, index {index}");
         }
 
         public void SetMode(ChallengeMode mode) {
             _Mode = mode;
             _Logger.LogInformation($"Challenge mode set to {mode}");
+            _ChallengeEvents.EmitModeChange(mode);
         }
 
         public void StartPoll(ChallengePollOptions options) {
@@ -133,8 +127,8 @@ namespace watchtower.Services.Implementations {
                 _Logger.LogTrace($"Added challenge {challenge.ID}/{challenge.Name} to poll at index {index - 1}");
             }
 
-            _ChallengeEvents.EmitChallengePollStarted(_PollResults);
-            _ChallengeEvents.EmitChallengePollTimerUpdate(_PollTimerLeft);
+            _ChallengeEvents.EmitPollStarted(_PollResults);
+            _ChallengeEvents.EmitPollTimerUpdate(_PollTimerLeft);
 
             _PollTimer.Start();
 
@@ -178,37 +172,47 @@ namespace watchtower.Services.Implementations {
 
                 _Logger.LogDebug(msg);
 
-                _ChallengeEvents.EmitChallengePollResultsEnded(_PollResults);
+                _ChallengeEvents.EmitPollEnded(_PollResults);
                 Start(_PollResults.WinnerChallengeID.Value);
 
                 _PollResults = null;
             }
         }
 
-        private void OnDurationTick(object? sender, ElapsedEventArgs args) {
-            DateTime time = args.SignalTime.ToUniversalTime();
-
-            long nowTicks = time.Ticks;
-            long prevTicks = _TickLastTick.Ticks;
-
-            long ticks = nowTicks - prevTicks;
-            _TickLastTick = time;
-
-            foreach (IndexedChallenge entry in _RunningChallenges) {
-                if (entry.Challenge.DurationType != ChallengeDurationType.TIMED) {
-                    continue;
-                }
-
-                entry.TickCount += ticks;
-                _Logger.LogTrace($"{entry.Index} {entry.Challenge.ID}/{entry.Challenge.Name} total ticks: {entry.TickCount}");
-
-                _ChallengeEvents.EmitChallengeUpdate(entry);
-
-                if ((int) Math.Round(entry.TickCount / TICKS_PER_SECOND) > entry.Challenge.Duration) {
-                    _Logger.LogDebug($"{entry.Index} {entry.Challenge.ID}/{entry.Challenge.Name} done");
-                    End(entry.Index);
-                }
+        public void AddActive(int ID) {
+            IRunChallenge? challenge = _AllChallenges.FirstOrDefault(iter => iter.ID == ID);
+            if (challenge == null) {
+                _Logger.LogWarning($"Cannot add active challenge {ID}: Challenge {ID} doesn't exist");
+                return;
             }
+
+            if (_ActiveChallenges.FirstOrDefault(iter => iter.ID == ID) != null) {
+                _Logger.LogWarning($"Cannot add active challenge {ID}: Challenge {ID}/{challenge.Name} is already active");
+                return;
+            }
+
+            _ActiveChallenges.Add(challenge);
+
+            _ChallengeEvents.EmitActiveListUpdate(_ActiveChallenges);
+        }
+
+        public void RemoveActive(int ID) {
+            IRunChallenge? challenge = _AllChallenges.FirstOrDefault(iter => iter.ID == ID);
+            if (challenge == null) {
+                _Logger.LogWarning($"Cannot remove active challenge {ID}: Challenge {ID} doesn't exist");
+                return;
+            }
+
+            if (_ActiveChallenges.FirstOrDefault(iter => iter.ID == ID) == null) {
+                _Logger.LogWarning($"Cannot remove active challenge {ID}: Challenge {ID}/{challenge.Name} is not active");
+                return;
+            }
+
+            _ActiveChallenges = _ActiveChallenges.Where(iter => {
+                return iter.ID != ID;
+            }).ToList();
+
+            _ChallengeEvents.EmitActiveListUpdate(_ActiveChallenges);
         }
 
         private void OnTimerTick(object? sender, ElapsedEventArgs args) {
@@ -225,7 +229,7 @@ namespace watchtower.Services.Implementations {
                 _Logger.LogTrace($"Time left on current poll: {_PollTimerLeft}");
             }
 
-            _ChallengeEvents.EmitChallengePollTimerUpdate(_PollTimerLeft);
+            _ChallengeEvents.EmitPollTimerUpdate(_PollTimerLeft);
 
             if (_PollTimerLeft <= 0) {
                 EndPoll();
@@ -233,7 +237,7 @@ namespace watchtower.Services.Implementations {
                 if (_PollResults == null) {
                     _Logger.LogWarning($"_PollResults is null in OnTimerTick, cannot emit update event");
                 } else {
-                    _ChallengeEvents.EmitChallengePollResultsUpdate(_PollResults);
+                    _ChallengeEvents.EmitPollResultsUpdate(_PollResults);
                 }
             }
         }
@@ -249,7 +253,6 @@ namespace watchtower.Services.Implementations {
                             IRunChallenge? challenge = clazz as IRunChallenge;
                             if (challenge != null) {
                                 _AllChallenges.Add(challenge);
-                                AddChallenge(challenge.ID);
                                 _Logger.LogDebug($"Successfully created challenge {type.Name} as {challenge.ID}/{challenge.Name}");
                             } else {
                                 _Logger.LogWarning($"type isn't an IRunChallenge");
@@ -262,54 +265,36 @@ namespace watchtower.Services.Implementations {
                     }
                 }
             }
+
+            _AllChallenges = _AllChallenges.OrderBy(iter => iter.ID).ToList();
         }
 
-        private void AddChallenge(int ID) {
-            IRunChallenge? newChall = _AllChallenges.FirstOrDefault(iter => iter.ID == ID);
-            if (newChall == null) {
-                _Logger.LogWarning($"Cannot add active challenge {ID}, does not exist");
+        private void OnTwitchChat(object? sender, Ps2EventArgs<TwitchChatMessage> args) {
+            if (_IsPollRunning == false) {
                 return;
             }
 
-            IRunChallenge? chall = _ActiveChallenges.FirstOrDefault(iter => iter.ID == ID);
-            if (chall != null) {
-                _Logger.LogDebug($"Not adding already active challenge {chall.ID}/{chall.Name}");
+            if (_PollResults == null) {
+                _Logger.LogWarning($"_PollResults is null, while _IsPollRunning is true and during OnTwitchChat");
                 return;
             }
 
-            _ActiveChallenges.Add(newChall);
-            _Logger.LogInformation($"Added active challenge {newChall.ID}/{newChall.Name}");
-        }
+            TwitchChatMessage msg = args.Payload;
 
-        public void Start(int ID) {
-            IRunChallenge? chall = _ActiveChallenges.FirstOrDefault(iter => iter.ID == ID);
-            if (chall == null) {
-                _Logger.LogWarning($"Cannot start challenge {ID}, is not active, or does not exist");
-                return;
+            if (Int32.TryParse(msg.Message, out int voteOption) == true) {
+                foreach (KeyValuePair<int, ChallengePollResult> entry in _PollResults.Options) {
+                    if (entry.Value.Users.Contains(msg.Username)) {
+                        entry.Value.Users.Remove(msg.Username);
+                    }
+                }
+
+                if (_PollResults.Options.TryGetValue(voteOption, out ChallengePollResult? result) == true) {
+                    result.Users.Add(msg.Username);
+                    _Logger.LogTrace($"{msg.Username} voted for option {voteOption}");
+                } else {
+                    _Logger.LogTrace($"{msg.Username} used invalid option {voteOption}");
+                }
             }
-
-            IndexedChallenge? running = _RunningChallenges.FirstOrDefault(iter => iter.Challenge.ID == ID);
-            if (running != null) {
-                _Logger.LogWarning($"Not adding repeat challenge {chall.ID}/{chall.Name}");
-                return;
-            }
-
-            IndexedChallenge newChall = new IndexedChallenge(chall);
-            _RunningChallenges.Add(newChall);
-            _Logger.LogInformation($"Started new challenge {newChall.Challenge.ID}/{newChall.Challenge.Name}, index {newChall.Index}");
-            _ChallengeEvents.EmitChallengeStart(newChall);
-        }
-
-        public void End(int index) {
-            IndexedChallenge? running = _RunningChallenges.FirstOrDefault(iter => iter.Index == index);
-            if (running == null) {
-                _Logger.LogWarning($"Cannot end running challenge index {index}, index not found");
-                return;
-            }
-
-            _ChallengeEvents.EmitChallengeEnded(running);
-            _RunningChallenges = _RunningChallenges.Where(iter => iter.Index != index).ToList();
-            _Logger.LogInformation($"Ended running challenge {running.Challenge.ID}/{running.Challenge.Name}, index {index}");
         }
 
         public ChallengePollResults? GetPollResults() => _PollResults;
@@ -318,25 +303,6 @@ namespace watchtower.Services.Implementations {
         public List<IRunChallenge> GetActive() => new List<IRunChallenge>(_ActiveChallenges);
         public List<IRunChallenge> GetAll() => new List<IRunChallenge>(_AllChallenges);
         public List<IndexedChallenge> GetRunning() => new List<IndexedChallenge>(_RunningChallenges);
-
-        /*
-        public void Remove(int ID) {
-            IRunChallenge? newChall = _AllChallenges.FirstOrDefault(iter => iter.ID == ID);
-            if (newChall == null) {
-                _Logger.LogWarning($"Cannot remove active challenge {ID}, does not exist");
-                return;
-            }
-
-            IRunChallenge? chall = _ActiveChallenges.FirstOrDefault(iter => iter.ID == ID);
-            if (chall == null) {
-                _Logger.LogDebug($"Challenge {newChall.ID}/{newChall.Name} is not active, not removing");
-                return;
-            }
-
-            _ActiveChallenges = _ActiveChallenges.Where(iter => iter.ID != ID).ToList();
-            _Logger.LogInformation($"Removed active challenge {chall.ID}/{chall.Name}");
-        }
-        */
 
     }
 }

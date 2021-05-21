@@ -14,7 +14,7 @@ namespace watchtower.Code.Challenge {
 
         public string Name => "GRAB THE SHOTGUN HONEY";
 
-        public string Description => "Next 5 kills must be with a shotgun";
+        public string Description => "Get kills with shotguns";
 
         public int Multiplier => 2;
 

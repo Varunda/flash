@@ -1,0 +1,103 @@
+﻿@using watchtower.Code
+@using watchtower.Models.Events
+
+@inject IMatchManager _Match
+@inject IMatchEventBroadcastService _MatchEvents
+
+@implements IDisposable
+
+<div>
+    <h2>Auto challenge</h2>
+
+    <hr />
+
+    <EditForm Model="_Settings" OnValidSubmit="updateSettings">
+        <div class="mb-3">
+            <div>
+                <b>Enabled</b>
+
+                <InputCheckbox @bind-Value="_Settings.Enabled" class="form-control autochallenge-toggle"></InputCheckbox>
+            </div>
+
+            Is auto challenge enabled?
+        </div>
+
+        <div class="mb-3">
+            <div>
+                <b>Start delay</b>
+            </div>
+            How many seconds to wait before starting the first poll
+
+            <InputNumber @bind-Value="_Settings.StartDelay" class="form-control"></InputNumber>
+        </div>
+
+        <div class="mb-3">
+            <div>
+                <b>Poll interval</b>
+            </div>
+            How many seconds to wait after a poll is started to send another poll
+
+            <InputNumber @bind-Value="_Settings.Interval" class="form-control"></InputNumber>
+        </div>
+
+        <div class="mb-3">
+            <div>
+                <b>End previous challenges</b>
+                <InputCheckbox @bind-Value="_Settings.EndPrevious" class="form-control autochallenge-toggle"></InputCheckbox>
+            </div>
+
+            Will an existing challenge be force ended if not completed when a new poll starts?
+        </div>
+
+        <div class="mb-3">
+            <div>
+                <b>Poll length</b>
+            </div>
+            How many seconds the poll will be open
+
+            <InputNumber @bind-Value="_Settings.PollTime" class="form-control"></InputNumber>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            Update
+        </button>
+    </EditForm>
+</div>
+
+<style>
+    .autochallenge-toggle {
+        display: inline-block;
+        width: unset;
+        height: unset;
+    }
+</style>
+
+@code {
+
+    private AutoChallengeSettings _Settings = new AutoChallengeSettings();
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _Settings = _Match.GetAutoChallengeSettings();
+
+        _MatchEvents.OnAutoSettingsChange += onAutoSettingsUpdate;
+    }
+
+    public void Dispose() {
+        _MatchEvents.OnAutoSettingsChange -= onAutoSettingsUpdate;
+    }
+
+    private void onAutoSettingsUpdate(object? sender, Ps2EventArgs<AutoChallengeSettings> args) {
+        _Settings = args.Payload;
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void updateSettings() {
+        _Match.SetAutoChallengeSettings(_Settings);
+    }
+
+}

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using watchtower.Census;
 using watchtower.Code;
+using watchtower.Code.Challenge;
 using watchtower.Constants;
 using watchtower.Models;
 using watchtower.Models.Census;
@@ -32,12 +33,14 @@ namespace watchtower.Services {
         private readonly IChallengeEventBroadcastService _ChallengeEvents;
         private readonly ISecondTimer _Timer;
 
-        private readonly Dictionary<int, TrackedPlayer> _Players = new Dictionary<int, TrackedPlayer>();
         private MatchState _State = MatchState.UNSTARTED;
         private DateTime _MatchStart = DateTime.UtcNow;
         private DateTime? _MatchEnd = null;
         private long _MatchTicks = 0;
+
+        private readonly Dictionary<int, TrackedPlayer> _Players = new Dictionary<int, TrackedPlayer>();
         private MatchSettings _Settings = new MatchSettings();
+        private AutoChallengeSettings _AutoSettings = new AutoChallengeSettings();
 
         public MatchManager(ILogger<MatchManager> logger,
                 ICharacterCollection charColl, IItemCollection itemColl,
@@ -145,6 +148,16 @@ namespace watchtower.Services {
             _MatchEvents.EmitMatchSettingsEvent(_Settings);
         }
 
+        public void SetAutoChallengeSettings(AutoChallengeSettings auto) {
+            if (_State == MatchState.RUNNING) {
+                _Logger.LogWarning($"Not changing auto challenge settings, as match is running");
+                return;
+            }
+
+            _AutoSettings = auto;
+            _MatchEvents.EmitAutoSettingsChange(_AutoSettings);
+        }
+
         public void SetRunnerName(int index, string? runnerName) {
             if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 player.RunnerName = runnerName ?? $"Runner {index + 1}";
@@ -189,9 +202,33 @@ namespace watchtower.Services {
             }
 
             _MatchTicks += args.ElapsedTicks;
-            _Logger.LogTrace($"ElapsedTicks: {args.ElapsedTicks}");
 
-            _MatchEvents.EmitTimerEvent((int)Math.Round(_MatchTicks / TICKS_PER_SECOND));
+            int matchLength = (int)Math.Round(_MatchTicks / TICKS_PER_SECOND);
+
+            _MatchEvents.EmitTimerEvent(matchLength);
+
+            if (_AutoSettings.Enabled) {
+                if ((matchLength - _AutoSettings.StartDelay) % _AutoSettings.Interval == 0) {
+                    _Logger.LogInformation($"Starting new auto challenge");
+                    StartAutoChallenge();
+                }
+            }
+
+            foreach (IndexedChallenge entry in _Challenges.GetRunning()) {
+                if (entry.Challenge.DurationType != ChallengeDurationType.TIMED) {
+                    continue;
+                }
+
+                entry.TickCount += args.ElapsedTicks;
+                //_Logger.LogTrace($"{entry.Index} {entry.Challenge.ID}/{entry.Challenge.Name} total ticks: {entry.TickCount}");
+
+                _ChallengeEvents.EmitChallengeUpdate(entry);
+
+                if ((int) Math.Round(entry.TickCount / TICKS_PER_SECOND) > entry.Challenge.Duration) {
+                    _Logger.LogDebug($"{entry.Index} {entry.Challenge.ID}/{entry.Challenge.Name} done");
+                    _Challenges.End(entry.Index);
+                }
+            }
         }
 
         public void StartRound() {
@@ -284,6 +321,26 @@ namespace watchtower.Services {
             _AdminMessages.Log($"Match stopped at {DateTime.UtcNow}");
 
             SetState(MatchState.FINISHED);
+        }
+
+        private void StartAutoChallenge() {
+            if (_AutoSettings.OptionCount <= 0) {
+                _Logger.LogWarning($"Cannot start auto poll, there are 0 options");
+                return;
+            }
+
+            List<IRunChallenge> challenges = _Challenges.GetActive().Shuffle();
+            if (_AutoSettings.OptionCount > challenges.Count) {
+                _Logger.LogWarning($"Setting auto challenge option count to {challenges.Count}, was {_AutoSettings.OptionCount}, which is more than options available");
+                _AutoSettings.OptionCount = challenges.Count;
+            }
+
+            ChallengePollOptions options = new ChallengePollOptions() {
+                Possible = challenges.Take(_AutoSettings.OptionCount).Select(i => i.ID).ToList(),
+                VoteTime = _AutoSettings.PollTime
+            };
+
+            _Challenges.StartPoll(options);
         }
 
         private void SetState(MatchState state) {
@@ -484,6 +541,7 @@ namespace watchtower.Services {
         public List<TrackedPlayer> GetPlayers() => _Players.Values.ToList();
         public int GetMatchLength() => (int)Math.Round(_MatchTicks / TICKS_PER_SECOND);
         public MatchSettings GetSettings() => _Settings;
+        public AutoChallengeSettings GetAutoChallengeSettings() => _AutoSettings;
 
     }
 }

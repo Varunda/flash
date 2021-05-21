@@ -14,7 +14,7 @@ namespace watchtower.Code.Challenge {
 
         public string Name => "Medic Kills";
 
-        public string Description => "Kills as a medic give 2x points";
+        public string Description => "Get kills as a medic";
 
         public int Duration => 300;
 

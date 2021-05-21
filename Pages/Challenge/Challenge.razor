@@ -1,0 +1,35 @@
+﻿@page "/challenge"
+
+@using watchtower.Code.Challenge
+@using watchtower.Pages.Components
+@using watchtower.Code
+
+@inject IChallengeEventBroadcastService _ChallengeEvents
+@inject IChallengeManager _ChallengeManager
+
+<div class="container-fluid">
+    <Header></Header>
+
+    <div class="row">
+        <div class="col-6">
+            <PollSetup></PollSetup>
+        </div>
+
+        <div class="col-3">
+            <ChallengeModeControls></ChallengeModeControls>
+        </div>
+
+        <div class="col-3">
+            <AutoChallengeControls></AutoChallengeControls>
+        </div>
+    </div>
+
+</div>
+
+@code {
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+    }
+
+}

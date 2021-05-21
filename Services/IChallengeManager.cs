@@ -62,14 +62,24 @@ namespace watchtower.Services {
         /// <summary>
         /// Start running a challenge, and actively give out points for it
         /// </summary>
-        /// <param name="ID"></param>
         void Start(int ID);
 
         /// <summary>
         /// Remove an actively running challenge, an no long give out points for it
         /// </summary>
-        /// <param name="index"></param>
         void End(int index);
+
+        /// <summary>
+        /// Add a challenge as an active challenge
+        /// </summary>
+        /// <param name="ID"></param>
+        void AddActive(int ID);
+
+        /// <summary>
+        /// Remove an active challenge
+        /// </summary>
+        /// <param name="ID"></param>
+        void RemoveActive(int ID);
 
     }
 }

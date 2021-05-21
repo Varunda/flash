@@ -1,0 +1,66 @@
+﻿@using watchtower.Code
+@using watchtower.Models.Events
+
+@inject IChallengeEventBroadcastService _ChallengeEvents
+@inject IChallengeManager _ChallengeManager
+
+@implements IDisposable
+
+<div>
+    <h2>Mode</h2>
+
+    <hr />
+
+    <b>
+        Current mode:
+    </b>
+    <span>
+        @_Mode
+    </span>
+
+    <hr />
+
+    <button type="button" class="btn btn-success w-100 mb-1" @onclick="() => _ChallengeManager.SetMode(ChallengeMode.NICE)">
+        Nice mode
+    </button>
+
+    <p>
+        <b>Nice mode:</b>
+        In nice mode, challenges act as a score multiplier, giving more points if the conditions is met. Runners are free to ignore the challenge
+    </p>
+
+    <button type="button" class="btn btn-danger w-100 mb-1" @onclick="() => _ChallengeManager.SetMode(ChallengeMode.MEAN)">
+        Mean mode
+    </button>
+
+    <p>
+        <b>Mean mode:</b>
+        In mean mode, points are only given if a challenge is met. Runners must follow the challenge to score points
+    </p>
+</div>
+
+@code {
+
+    private ChallengeMode _Mode;
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _Mode = _ChallengeManager.GetMode();
+
+        _ChallengeEvents.OnModeChange += onModeChange;
+    }
+
+    private void onModeChange(object? sender, Ps2EventArgs<ChallengeMode> args) {
+        _Mode = args.Payload;
+
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() {
+        _ChallengeEvents.OnModeChange -= onModeChange;
+    }
+
+}
