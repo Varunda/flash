@@ -40,17 +40,13 @@ namespace watchtower.Services.Implementations {
         public ChallengeManager(ILogger<ChallengeManager> logger,
             IChallengeEventBroadcastService challengeEvents, ITwitchChatBroadcastService twitchChat) {
 
+            logger.LogInformation($"ctor");
+
             _ChallengeEvents = challengeEvents ?? throw new ArgumentNullException(nameof(challengeEvents));
             _TwitchChat = twitchChat ?? throw new ArgumentNullException(nameof(twitchChat));
 
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-            /*
-            _AllChallenges.Add(new HeadshotChallenge());
-            _AllChallenges.Add(new MedicChallenge());
-            Add(1);
-            Add(2);
-            */
+            _Logger.LogDebug($"starting challenge manager");
 
             LoadChallenges();
             _Logger.LogInformation($"Loaded challenges:\n{String.Join("\n", _AllChallenges.Select(iter => $"\t{iter.ID}/{iter.Name}: {iter.Description}"))}");
@@ -65,7 +61,6 @@ namespace watchtower.Services.Implementations {
             _TickTimer.AutoReset = true;
             _TickTimer.Elapsed += OnDurationTick;
             _TickTimer.Start();
-
         }
 
         private void OnTwitchChat(object? sender, Ps2EventArgs<TwitchChatMessage> args) {

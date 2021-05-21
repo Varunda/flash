@@ -20,10 +20,8 @@ namespace watchtower.Services {
         void RestartRound();
 
         /// <summary>
-        /// Reset a match, clearing the runners
+        /// Clear the match, resetting everything for another match
         /// </summary>
-        void ResetRound();
-
         void ClearMatch();
 
         /// <summary>
@@ -34,7 +32,7 @@ namespace watchtower.Services {
         /// <summary>
         /// Stop the current match. Does nothing if a match isn't running
         /// </summary>
-        void StopRound();
+        void StopRound(int? winnerIndex = null);
 
         /// <summary>
         /// Get the current state of the match
@@ -61,6 +59,11 @@ namespace watchtower.Services {
         /// <returns>If the character was successfully added or not</returns>
         Task<bool> AddCharacter(int index, string charName);
 
+        /// <summary>
+        /// Remove a character from a team
+        /// </summary>
+        /// <param name="index">Index of the team to remove the character from</param>
+        /// <param name="charName">Name of the character to be removed</param>
         void RemoveCharacter(int index, string charName);
 
         /// <summary>
@@ -78,10 +81,10 @@ namespace watchtower.Services {
         void SetScore(int index, int score);
 
         /// <summary>
-        /// Get the score of a runner
+        /// Get the score of a runner, or null if it doesn't exist
         /// </summary>
         /// <param name="index">Index of the runner to get the score of</param>
-        int GetScore(int index);
+        int? GetScore(int index);
 
         /// <summary>
         /// Get the runner being tracked

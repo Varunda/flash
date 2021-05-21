@@ -9,35 +9,75 @@
 <img src="/font/example.png" style="position:absolute; z-index: -10;" />
 -->
 
-<div class="overlay-parent sr-border sr-vertical-center">
-    <span class="overlay-name overlay-name-left">
-        @if (_player1 != null) {
-            @_player1.RunnerName
-        }
-    </span>
+<div class="sr-vertical-center">
+    <div class="overlay-parent sr-border">
 
-    <span class="overlay-score overlay-score-left">
-        @if (_player1 != null) {
-            @_player1.Score
-        }
-    </span>
+        <span class="overlay-name overlay-name-left">
+            @if (_player1 != null) {
+                @_player1.RunnerName
+            }
+        </span>
 
-    <span style="width: 100px; text-align: center; font-family: ps2-mono; display: inline-block;">
-        <Timer Seconds="_MatchLength"></Timer>
-    </span>
+        <span class="overlay-score overlay-score-left">
+            @if (_player1 != null) {
+                @_player1.Score
+            }
+        </span>
 
-    <span class="overlay-score overlay-score-right">
-        @if (_player2 != null) {
-            @_player2.Score
-        }
-    </span>
+        <span style="width: 100px; text-align: center; font-family: ps2-mono; display: inline-block;">
+            <Timer Seconds="_MatchLength"></Timer>
+        </span>
 
-    <span class="overlay-name overlay-name-right">
-        @if (_player2 != null) {
-            @_player2.RunnerName
-        }
-    </span>
+        <span class="overlay-score overlay-score-right">
+            @if (_player2 != null) {
+                @_player2.Score
+            }
+        </span>
+
+        <span class="overlay-name overlay-name-right">
+            @if (_player2 != null) {
+                @_player2.RunnerName
+            }
+        </span>
+
+    </div>
+
+    <div>
+        <span class="overlay-wins overlay-wins-left">
+            @if (_player1 != null) {
+                for (int i = _RoundCount; i > 0; --i) {
+                    if (i <= _player1.Wins) {
+                        <span class="overlay-indicator overlay-win-win">
+                        </span>
+                    } else {
+                        <span class="overlay-indicator overlay-win-lose">
+                        </span>
+                    }
+                }
+            }
+        </span>
+
+        <span style="width: 108px; display: inline-block">
+            &nbsp;
+        </span>
+
+        <span class="overlay-wins overlay-wins-right">
+            @if (_player2 != null) {
+                for (int i = 0; i < _RoundCount; ++i) {
+                    if (i < _player2.Wins) {
+                        <span class="overlay-indicator overlay-win-win">
+                        </span>
+                    } else {
+                        <span class="overlay-indicator overlay-win-lose">
+                        </span>
+                    }
+                }
+            }
+        </span>
+
+    </div>
 </div>
+
 
 <style>
     .table td {
@@ -61,12 +101,12 @@
 
     .overlay-name-left {
         text-align: start;
-        padding-left: 1rem;
+        padding-left: 0.5rem;
     }
 
     .overlay-name-right {
         text-align: end;
-        padding-right: 1rem;
+        padding-right: 0.5rem;
     }
 
     .overlay-score {
@@ -76,13 +116,44 @@
     }
 
     .overlay-score-left {
-        border-right: 3px #e8b55c solid;
+        border-right: 3px var(--color-primary) solid;
         text-align: end;
     }
 
     .overlay-score-right {
-        border-left: 3px #e8b55c solid;
+        border-left: 3px var(--color-primary) solid;
         text-align: start;
+    }
+
+    .overlay-wins {
+        display: inline-block;
+        padding: 0 0.5rem;
+    }
+
+    .overlay-wins-left {
+        /*border-right: 3px var(--color-primary) solid;*/
+        text-align: end;
+    }
+
+    .overlay-wins-right {
+        /*border-left: 3px var(--color-primary) solid;*/
+        text-align: start;
+    }
+
+    .overlay-indicator {
+        border-radius: 12px;
+        display: inline-block;
+        height: 1rem;
+        width: 1rem;
+        margin-top: 0.25rem;
+    }
+
+    .overlay-win-win {
+        border: 8px var(--color-primary) solid;
+    }
+
+    .overlay-win-lose {
+        border: 8px var(--color-secondary) solid;
     }
 
 </style>
@@ -94,6 +165,8 @@
 
     private int _MatchLength;
     private MatchSettings _MatchSettings = default!;
+
+    public int _RoundCount = 0;
 
     /*
     private double _p1KD;
@@ -118,6 +191,8 @@
         _player2 = _Match.GetPlayer(1);
 
         _MatchSettings = _Match.GetSettings();
+
+        UpdateWinCount();
     }
 
     private void OnPlayerUpdate(object? sender, Ps2EventArgs<TrackedPlayer?> args) {
@@ -156,6 +231,8 @@
                 */
             }
         }
+
+        UpdateWinCount();
 
         InvokeAsync(() => {
             StateHasChanged();
@@ -196,6 +273,10 @@
 
     private void OnSettingsUpdate(object? sender, Ps2EventArgs<MatchSettings> args) {
         _MatchSettings = args.Payload;
+    }
+
+    private void UpdateWinCount() {
+        _RoundCount = (_player1?.Wins ?? 0) + (_player2?.Wins ?? 0);
     }
 
 }

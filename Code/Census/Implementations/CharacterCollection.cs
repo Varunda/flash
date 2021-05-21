@@ -63,7 +63,9 @@ namespace watchtower.Census {
 
         public async Task<Character?> GetByIDAsync(string ID) {
             if (_Cache.TryGetValue(ID, out Character? player) == false) {
-                _Pending.Add(ID);
+                lock (_Pending) {
+                    _Pending.Add(ID);
+                }
 
                 player = await _GetCharacterFromCensus(ID, true);
                 if (player == null) {
@@ -72,7 +74,9 @@ namespace watchtower.Census {
 
                 _Cache.TryAdd(ID, player);
 
-                _Pending.Remove(ID);
+                lock (_Pending) {
+                    _Pending.Remove(ID);
+                }
             }
 
             return player;

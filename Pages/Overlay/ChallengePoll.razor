@@ -82,10 +82,7 @@
 @code {        
 
     private bool _Display = false;
-    private bool _CanVote = false;
     private bool _IsChanging = false;
-
-    private bool _HasWinner = false;
 
     private ChallengePollResults? _Results;
     private int _TimerLeft;
@@ -105,7 +102,6 @@
             _TimerLeft = _ChallengeManager.GetPollTimer();
 
             _Display = true;
-            _CanVote = true;
         }
     }
 
@@ -135,7 +131,6 @@
     private void OnPollStart(object? sender, Ps2EventArgs<ChallengePollResults> args) {
         _Results = args.Payload;
         _Display = true;
-        _CanVote = true;
         _IsChanging = false;
 
         UpdateTotal();
@@ -157,7 +152,6 @@
 
     private void OnPollEnded(object? sender, Ps2EventArgs<ChallengePollResults> args) {
         _Results = args.Payload;
-        _CanVote = false;
 
         UpdateTotal();
 

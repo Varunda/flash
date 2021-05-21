@@ -78,13 +78,16 @@ namespace watchtower.Services.Hosted {
             */
 
             _Logger.LogDebug($"Connecting to chat: {_Options.Value.ChatTargetChannel}");
-            _Logger.LogDebug($"{_Options.Value.ChatUsername}/{_Options.Value.ChatOAuth}");
 
-            ConnectionCredentials creds = new ConnectionCredentials(_Options.Value.ChatUsername, _Options.Value.ChatOAuth);
-            _TwitchClient.Initialize(creds);
-            _TwitchClient.Connect();
-            _TwitchClient.JoinChannel("varundaa");
-            _TwitchClient.JoinChannel("shoctorr");
+            try {
+                ConnectionCredentials creds = new ConnectionCredentials(_Options.Value.ChatUsername, _Options.Value.ChatOAuth);
+                _TwitchClient.Initialize(creds);
+                _TwitchClient.Connect();
+                _TwitchClient.JoinChannel("varundaa");
+                _TwitchClient.JoinChannel("shoctorr");
+            } catch (Exception ex) {
+                _Logger.LogError($"Failed to connect to Twitch: {ex}");
+            }
 
             return Task.CompletedTask;
         }

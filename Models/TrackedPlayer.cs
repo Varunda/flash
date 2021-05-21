@@ -29,6 +29,8 @@ namespace watchtower.Models {
 
         public List<ScoreEvent> Scores { get; set; } = new List<ScoreEvent>();
 
+        public int Wins { get; set; } = 0;
+
         public int Streak { get; set; } = 0;
         
         public List<int> Streaks { get; set; } = new List<int>();

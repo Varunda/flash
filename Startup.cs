@@ -51,6 +51,7 @@ namespace watchtower {
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             services.AddSingleton<ICommandBus, CommandBus>();
 
+            services.AddSingleton<ISecondTimer, SecondTimer>();
             services.AddSingleton<IMatchManager, MatchManager>();
             services.AddSingleton<IChallengeManager, ChallengeManager>();
             services.AddSingleton<IRealtimeEventBroadcastService, RealtimeEventBroadcastService>();

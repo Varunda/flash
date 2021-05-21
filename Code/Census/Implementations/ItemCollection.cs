@@ -45,11 +45,11 @@ namespace watchtower.Census {
             return item;
         }
 
-        public async Task<List<PsItem>> GetByTypeID(int typeID) {
+        public Task<List<PsItem>> GetByTypeID(int typeID) {
             throw new NotImplementedException();
         }
 
-        public async Task<List<PsItem>> GetByCategoryID(int categoryID) {
+        public Task<List<PsItem>> GetByCategoryID(int categoryID) {
             throw new NotImplementedException();
         }
 

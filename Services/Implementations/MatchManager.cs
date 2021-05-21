@@ -16,6 +16,8 @@ namespace watchtower.Services {
 
     public class MatchManager : IMatchManager {
 
+        const double TICKS_PER_SECOND = 10000000D;
+
         private readonly ILogger<MatchManager> _Logger;
 
         private readonly ICharacterCollection _CharacterColleciton;
@@ -28,20 +30,13 @@ namespace watchtower.Services {
         private readonly IAdminMessageBroadcastService _AdminMessages;
         private readonly IChallengeManager _Challenges;
         private readonly IChallengeEventBroadcastService _ChallengeEvents;
+        private readonly ISecondTimer _Timer;
 
         private readonly Dictionary<int, TrackedPlayer> _Players = new Dictionary<int, TrackedPlayer>();
-
         private MatchState _State = MatchState.UNSTARTED;
-
-        private readonly Timer _MatchTimer;
-        private DateTime _LastTimerTick = DateTime.UtcNow;
-
         private DateTime _MatchStart = DateTime.UtcNow;
         private DateTime? _MatchEnd = null;
-
         private long _MatchTicks = 0;
-        const double TICKS_PER_SECOND = 10000000D;
-
         private MatchSettings _Settings = new MatchSettings();
 
         public MatchManager(ILogger<MatchManager> logger,
@@ -49,7 +44,7 @@ namespace watchtower.Services {
                 IRealtimeEventBroadcastService events, IMatchEventBroadcastService matchEvents,
                 IRealtimeMonitor realtime, IChallengeEventBroadcastService challengeEvents,
                 IMatchMessageBroadcastService matchMessages, IAdminMessageBroadcastService adminMessages,
-                IChallengeManager challenges) {
+                IChallengeManager challenges, ISecondTimer timer) {
 
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -65,7 +60,7 @@ namespace watchtower.Services {
             _AdminMessages = adminMessages ?? throw new ArgumentNullException(nameof(adminMessages));
             _Challenges = challenges ?? throw new ArgumentNullException(nameof(challenges));
 
-            _MatchTimer = new Timer(1000D);
+            _Timer = timer ?? throw new ArgumentNullException(nameof(timer));
 
             SetSettings(new MatchSettings());
 
@@ -76,7 +71,7 @@ namespace watchtower.Services {
             _RealtimeEvents.OnKillEvent += KillHandler;
             _RealtimeEvents.OnExpEvent += ExpHandler;
 
-            _MatchTimer.Elapsed += OnTimerTick;
+            _Timer.OnTick += OnTick;
         }
 
         public async Task<bool> AddCharacter(int index, string charName) {
@@ -135,7 +130,6 @@ namespace watchtower.Services {
             }
         }
 
-        public MatchSettings GetSettings() => _Settings;
 
         public void SetSettings(MatchSettings settings) {
             if (_State == MatchState.RUNNING) {
@@ -166,20 +160,20 @@ namespace watchtower.Services {
 
                 if (player.Score >= _Settings.KillGoal) {
                     _MatchMessages.Log($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
-                    StopRound();
+                    StopRound(index);
                 }
             } else {
                 _Logger.LogWarning($"Cannot set score of runner {index}, _Players does not contain");
             }
         }
 
-        public int GetScore(int index) {
+        public int? GetScore(int index) {
             if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 return player.Score;
-            } else {
-                _Logger.LogWarning($"Cannot get score of runner {index}, _Players does not contain");
-                return -1;
             }
+
+            _Logger.LogWarning($"Cannot get score of runner {index}, _Players does not contain");
+            return null;
         }
 
         public TrackedPlayer? GetPlayer(int index) {
@@ -189,19 +183,15 @@ namespace watchtower.Services {
             return null;
         }
 
-        private void OnTimerTick(object? sender, ElapsedEventArgs args) {
-            DateTime time = args.SignalTime.ToUniversalTime();
+        private void OnTick(object? sender, SecondTimerArgs args) {
+            if (_State != MatchState.RUNNING) {
+                return;
+            }
 
-            long nowTicks = time.Ticks;
-            long prevTicks = _LastTimerTick.Ticks;
-
-            _MatchTicks += nowTicks - prevTicks;
-
-            //_Logger.LogDebug($"Total ticks: {_MatchTicks}, seconds {Math.Round(_MatchTicks / TICKS_PER_SECOND)}");
+            _MatchTicks += args.ElapsedTicks;
+            _Logger.LogTrace($"ElapsedTicks: {args.ElapsedTicks}");
 
             _MatchEvents.EmitTimerEvent((int)Math.Round(_MatchTicks / TICKS_PER_SECOND));
-
-            _LastTimerTick = DateTime.UtcNow;
         }
 
         public void StartRound() {
@@ -215,10 +205,6 @@ namespace watchtower.Services {
                 _MatchStart = DateTime.UtcNow;
                 _AdminMessages.Log($"Match unstarted, resetting ticks and start");
             }
-
-            _MatchTimer.AutoReset = true;
-            _MatchTimer.Start();
-            _LastTimerTick = DateTime.UtcNow;
 
             SetState(MatchState.RUNNING);
 
@@ -235,11 +221,11 @@ namespace watchtower.Services {
                 player.Streak = 0;
                 player.Streaks = new List<int>();
                 player.Characters = new List<Character>();
+                player.Wins = 0;
             }
 
             _Players.Clear();
 
-            _MatchTimer.Stop();
             _MatchTicks = 0;
 
             SetState(MatchState.UNSTARTED);
@@ -260,7 +246,6 @@ namespace watchtower.Services {
             _MatchTicks = 0;
 
             _MatchEvents.EmitTimerEvent(0);
-            _MatchTimer.Stop();
 
             foreach (TrackedPlayer player in GetPlayers()) {
                 player.Score = 0;
@@ -277,41 +262,23 @@ namespace watchtower.Services {
             _AdminMessages.Log($"Match restarted at {DateTime.UtcNow}");
         }
 
-        public void ResetRound() {
-            _MatchStart = DateTime.UtcNow;
-            _MatchEnd = null;
-            _MatchTicks = 0;
-
-            _MatchEvents.EmitTimerEvent(0);
-            _MatchTimer.Stop();
-
-            foreach (TrackedPlayer player in GetPlayers()) {
-                player.Score = 0;
-                player.Kills = new List<KillEvent>();
-                player.ValidKills = new List<KillEvent>();
-                player.Deaths = new List<KillEvent>();
-                player.Exp = new List<ExpEvent>();
-                player.Streak = 0;
-                player.Streaks = new List<int>();
-                player.Characters = new List<Character>();
-            }
-
-            SetState(MatchState.UNSTARTED);
-
-            _AdminMessages.Log($"Round reset at {DateTime.UtcNow}");
-        }
-
         public void PauseRound() {
-            _MatchTimer.Stop();
-
             SetState(MatchState.PAUSED);
 
             _AdminMessages.Log($"Round paused at {DateTime.UtcNow}");
         }
 
-        public void StopRound() {
-            _MatchTimer.Stop();
+        public void StopRound(int? winnerIndex = null) {
             _MatchEnd = DateTime.UtcNow;
+
+            if (winnerIndex != null) {
+                if (_Players.TryGetValue(winnerIndex.Value, out TrackedPlayer? runner) == true) {
+                    runner.Wins += 1;
+                    _MatchEvents.EmitPlayerUpdateEvent(runner.Index, runner);
+                } else {
+                    _Logger.LogWarning($"Cannot set winner to index {winnerIndex.Value}, _Players does not have");
+                }
+            }
 
             _Logger.LogInformation($"Match finished at {_MatchEnd}");
             _AdminMessages.Log($"Match stopped at {DateTime.UtcNow}");
@@ -327,18 +294,6 @@ namespace watchtower.Services {
 
             _State = state;
             _MatchEvents.EmitMatchStateEvent(_State);
-        }
-
-        public MatchState GetState() => _State;
-
-        public DateTime GetMatchStart() => _MatchStart;
-
-        public DateTime? GetMatchEnd() => _MatchEnd;
-
-        public List<TrackedPlayer> GetPlayers() => _Players.Values.ToList();
-
-        public int GetMatchLength() {
-            return (int)Math.Round(_MatchTicks / TICKS_PER_SECOND);
         }
 
         private async void KillHandler(object? sender, Ps2EventArgs<KillEvent> args) {
@@ -431,7 +386,7 @@ namespace watchtower.Services {
                                     if (player.Score >= _Settings.KillGoal) {
                                         _Logger.LogInformation($"Player {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
                                         _MatchMessages.Log($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
-                                        StopRound();
+                                        StopRound(player.Index);
                                     }
                                 } else {
                                     _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} invalid weapon, {weapon.Name}/{weapon.CategoryID}");
@@ -465,7 +420,6 @@ namespace watchtower.Services {
                     _MatchEvents.EmitPlayerUpdateEvent(index, player);
                 }
             }
-
         }
 
         private void ExpHandler(object? sender, Ps2EventArgs<ExpEvent> args) {
@@ -523,6 +477,13 @@ namespace watchtower.Services {
 
             return null;
         }
+
+        public MatchState GetState() => _State;
+        public DateTime GetMatchStart() => _MatchStart;
+        public DateTime? GetMatchEnd() => _MatchEnd;
+        public List<TrackedPlayer> GetPlayers() => _Players.Values.ToList();
+        public int GetMatchLength() => (int)Math.Round(_MatchTicks / TICKS_PER_SECOND);
+        public MatchSettings GetSettings() => _Settings;
 
     }
 }
