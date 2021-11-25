@@ -255,6 +255,7 @@ namespace watchtower.Services {
         public void ClearMatch() {
             foreach (TrackedPlayer player in GetPlayers()) {
                 player.Score = 0;
+                player.Scores = new List<ScoreEvent>();
                 player.Kills = new List<KillEvent>();
                 player.ValidKills = new List<KillEvent>();
                 player.Deaths = new List<KillEvent>();
@@ -290,6 +291,7 @@ namespace watchtower.Services {
 
             foreach (TrackedPlayer player in GetPlayers()) {
                 player.Score = 0;
+                player.Scores = new List<ScoreEvent>();
                 player.Kills = new List<KillEvent>();
                 player.ValidKills = new List<KillEvent>();
                 player.Deaths = new List<KillEvent>();
@@ -553,7 +555,7 @@ namespace watchtower.Services {
             }
 
             ExpEntry? entry = await _ExpCollection.GetByID(ev.ExpID);
-            _MatchMessages.Log($"Team {runner.Index}:{runner.RunnerName} @{c?.Name} {direction} {entry?.Description ?? $"missing ${ev.ExpID}"}");
+            _MatchMessages.Log($"Team {runner.Index}:{runner.RunnerName} @{c?.Name} {direction} {entry?.Description ?? $"missing {ev.ExpID}"}");
         }
 
         private TrackedPlayer? _GetRunnerFromID(string charID) {

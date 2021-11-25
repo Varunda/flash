@@ -1,5 +1,6 @@
 ﻿@using watchtower.Services 
 @using watchtower.Models.Events
+@using watchtower.Constants
 
 @inject IMatchManager _Match
 @inject IMatchEventBroadcastService _MatchEvent
@@ -65,6 +66,20 @@
             </td>
         </tr>
 
+        <tr>
+            <td>SPM</td>
+            <td>
+                @String.Format("{0,2:F2}", _spm)
+            </td>
+        </tr>
+
+        <tr>
+            <td>Assists</td>
+            <td>
+                @_assists
+            </td>
+        </tr>
+
     </table>
 </div>
 
@@ -78,6 +93,8 @@
     private double _hsr;
     private int _maxStreak;
     private int _pace;
+    private double _spm;
+    private int _assists;
 
     protected override void OnInitialized() {
         base.OnInitialized();
@@ -95,6 +112,8 @@
         _kd = (double) Player.ValidKills.Count / Math.Max(1D, (double) Player.Deaths.Count);
         _hsr = (((double) Math.Max(1, Player.ValidKills.Where(iter => iter.IsHeadshot == true).Count()) / ((double) Player.ValidKills.Count))) * 100;
         _pace = (int) Math.Floor((((double) _Match.GetSettings().KillGoal) / _kpm) * 60);
+        _spm = Player.Exp.Sum(iter => iter.Amount) / Math.Max(1D, (double)len) * 60D;
+        _assists = Player.Exp.Where(iter => Experience.IsAssist(iter.ExpID)).Count();
 
         foreach (int streak in Player.Streaks) {
             if (streak > _maxStreak) {
