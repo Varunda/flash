@@ -58,15 +58,6 @@
             </td>
         </tr>
 
-        <!--
-        <tr>
-            <td>Avg streak</td>
-            <td>
-                @String.Format("{0,2:F2}", _avgStreak)
-            </td>
-        </tr>
-        -->
-
         <tr>
             <td>Max streak</td>
             <td>
@@ -85,7 +76,6 @@
     private double _kpm;
     private double _kd;
     private double _hsr;
-    private double _avgStreak;
     private int _maxStreak;
     private int _pace;
 
@@ -106,16 +96,10 @@
         _hsr = (((double) Math.Max(1, Player.ValidKills.Where(iter => iter.IsHeadshot == true).Count()) / ((double) Player.ValidKills.Count))) * 100;
         _pace = (int) Math.Floor((((double) _Match.GetSettings().KillGoal) / _kpm) * 60);
 
-        if (Player.Streaks.Count > 0) {
-            foreach (int streak in Player.Streaks) {
-                if (streak > _maxStreak) {
-                    _maxStreak = streak;
-                }
-                _avgStreak += streak;
+        foreach (int streak in Player.Streaks) {
+            if (streak > _maxStreak) {
+                _maxStreak = streak;
             }
-            _avgStreak = _avgStreak / Player.Streaks.Count;
-        } else {
-            _avgStreak = 0;
         }
     }
 

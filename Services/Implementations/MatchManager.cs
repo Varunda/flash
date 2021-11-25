@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using watchtower.Census;
 using watchtower.Code;
+using watchtower.Code.Census.Implementations;
 using watchtower.Code.Challenge;
 using watchtower.Constants;
 using watchtower.Models;
@@ -23,6 +24,7 @@ namespace watchtower.Services {
 
         private readonly ICharacterCollection _CharacterColleciton;
         private readonly IItemCollection _ItemCollection;
+        private readonly ExperienceCollection _ExpCollection;
 
         private readonly IRealtimeMonitor _Realtime;
         private readonly IRealtimeEventBroadcastService _RealtimeEvents;
@@ -47,12 +49,14 @@ namespace watchtower.Services {
                 IRealtimeEventBroadcastService events, IMatchEventBroadcastService matchEvents,
                 IRealtimeMonitor realtime, IChallengeEventBroadcastService challengeEvents,
                 IMatchMessageBroadcastService matchMessages, IAdminMessageBroadcastService adminMessages,
-                IChallengeManager challenges, ISecondTimer timer) {
+                IChallengeManager challenges, ISecondTimer timer,
+                ExperienceCollection expColl) {
 
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             _CharacterColleciton = charColl ?? throw new ArgumentNullException(nameof(charColl));
             _ItemCollection = itemColl ?? throw new ArgumentNullException(nameof(itemColl));
+            _ExpCollection = expColl ?? throw new ArgumentNullException(nameof(expColl));
 
             _Realtime = realtime ?? throw new ArgumentNullException(nameof(realtime));
             _RealtimeEvents = events ?? throw new ArgumentNullException(nameof(events));
@@ -383,79 +387,7 @@ namespace watchtower.Services {
 
                         emit = true;
                     } else if (c.ID == ev.SourceID) {
-                        if (sourceFactionID == targetFactionID) {
-                            _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} TK");
-                            _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} got a TK");
-                        } else {
-                            //_Logger.LogInformation($"Player {index}:{player.RunnerName} kill");
-                            player.Kills.Add(ev);
-
-                            PsItem? weapon = await _ItemCollection.GetByID(ev.WeaponID);
-                            if (weapon != null) {
-                                if (ItemCategory.IsValidSpeedrunnerWeapon(weapon) == true) {
-                                    player.Streak += 1;
-                                    player.ValidKills.Add(ev);
-
-                                    int score = 1;
-
-                                    List<IndexedChallenge> runningChallenges = _Challenges.GetRunning();
-                                    foreach (IndexedChallenge challenge in runningChallenges) {
-                                        bool met = await challenge.Challenge.WasMet(ev, weapon);
-
-                                        if (_Challenges.GetMode() == ChallengeMode.MEAN) {
-                                            if (met == false) {
-                                                _Logger.LogTrace($"Team {index}:{player.RunnerName} @{c.Name} failed challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}");
-                                                score = 0;
-                                            } else {
-                                                challenge.KillCount += 1;
-                                                _ChallengeEvents.EmitChallengeUpdate(challenge);
-                                            }
-                                        } else if (_Challenges.GetMode() == ChallengeMode.NICE) {
-                                            if (met == true) {
-                                                challenge.KillCount += 1;
-                                                _ChallengeEvents.EmitChallengeUpdate(challenge);
-                                                _Logger.LogTrace($"Team {index}:{player.RunnerName} @{c.Name} met challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}, score mult {challenge.Challenge.Multiplier}");
-                                                score *= challenge.Challenge.Multiplier;
-                                            }
-                                        } else {
-                                            _Logger.LogError($"Unknown challenge mode {_Challenges.GetMode()}");
-                                        }
-
-                                        if (challenge.Challenge.DurationType == Code.Challenge.ChallengeDurationType.KILLS && challenge.KillCount >= challenge.Challenge.Duration) {
-                                            _Logger.LogDebug($"Team {index}:{player.RunnerName} @{c.Name} finished challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}");
-                                            _Challenges.End(challenge.Index);
-                                        }
-                                    }
-
-                                    if (score != 0) {
-                                        player.Scores.Add(new ScoreEvent() {
-                                            Timestamp = ev.Timestamp,
-                                            ScoreChange = score,
-                                            TotalScore = player.Score + score
-                                        });
-                                    }
-
-                                    player.Score += score;
-
-                                    _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} valid weapon {score} points, {weapon.Name}/{weapon.CategoryID}");
-                                    _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} VALID kill {score} points, {weapon.Name}/{weapon.CategoryID}, faction {targetFactionID}");
-
-                                    if (player.Score >= _Settings.KillGoal) {
-                                        _Logger.LogInformation($"Player {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
-                                        _MatchMessages.Log($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
-                                        StopRound(player.Index);
-                                    }
-                                } else {
-                                    _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} invalid weapon, {weapon.Name}/{weapon.CategoryID}");
-                                    _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} INVALID kill, {weapon.Name}/{weapon.CategoryID}, faction {targetFactionID}");
-                                }
-                            } else {
-                                _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} UNKNOWN WEAPON {ev.WeaponID}, faction {targetFactionID}");
-                                _Logger.LogInformation($"Null weapon {ev.WeaponID}");
-                            }
-
-                            emit = true;
-                        }
+                        emit = await HandleNotTKKill(args, index, player, c);
                     } else if (c.ID == ev.TargetID) {
                         if (player.Streak > 1) {
                             player.Streaks.Add(player.Streak);
@@ -479,7 +411,118 @@ namespace watchtower.Services {
             }
         }
 
-        private void ExpHandler(object? sender, Ps2EventArgs<ExpEvent> args) {
+        private async Task<bool> HandleNotTKKill(Ps2EventArgs<KillEvent> args, int index, TrackedPlayer player, Character c) {
+            KillEvent ev = args.Payload;
+
+            string sourceFactionID = Loadout.GetFaction(ev.LoadoutID);
+            string targetFactionID = Loadout.GetFaction(ev.TargetLoadoutID);
+
+            bool emit = false;
+
+            if (sourceFactionID == targetFactionID) {
+                _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} TK");
+                _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} got a TK");
+            } else {
+                //_Logger.LogInformation($"Player {index}:{player.RunnerName} kill");
+                player.Kills.Add(ev);
+
+                // Wait for the EXP events to show up
+                await Task.Delay(100);
+
+                ExpEvent? expEvent = null;
+                for (int i = player.Exp.Count - 1; i >= 0; --i) {
+                    ExpEvent exp = player.Exp[i];
+                    //_Logger.LogTrace($"Finding exp event from {i}, got {exp.ExpID} {exp.Timestamp}, looking for timestamp {ev.Timestamp}");
+                    if (exp.Timestamp < ev.Timestamp) {
+                        _Logger.LogTrace($"{exp.Timestamp} is less than {ev.Timestamp}, leaving now");
+                        break;
+                    }
+
+                    if (exp.Timestamp == ev.Timestamp && Experience.IsKill(exp.ExpID)) {
+                        //_Logger.LogTrace($"Found {ev.Timestamp} in {exp.ExpID} {exp.Timestamp}");
+                        expEvent = exp;
+                        break;
+                    }
+                }
+
+                if (expEvent == null) {
+                    _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} Missing kill exp event, assuming to be a TK");
+                    return false;
+                }
+
+                _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} exp event for kill: {expEvent?.ExpID.ToString() ?? $"<failed to find exp event for kill>"}");
+
+                PsItem? weapon = await _ItemCollection.GetByID(ev.WeaponID);
+                if (weapon != null) {
+                    if (ItemCategory.IsValidSpeedrunnerWeapon(weapon) == true) {
+                        player.Streak += 1;
+                        player.ValidKills.Add(ev);
+
+                        int score = 1;
+
+                        List<IndexedChallenge> runningChallenges = _Challenges.GetRunning();
+                        foreach (IndexedChallenge challenge in runningChallenges) {
+                            bool met = await challenge.Challenge.WasMet(ev, weapon);
+
+                            if (_Challenges.GetMode() == ChallengeMode.MEAN) {
+                                if (met == false) {
+                                    _Logger.LogTrace($"Team {index}:{player.RunnerName} @{c.Name} failed challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}");
+                                    score = 0;
+                                } else {
+                                    challenge.KillCount += 1;
+                                    _ChallengeEvents.EmitChallengeUpdate(challenge);
+                                }
+                            } else if (_Challenges.GetMode() == ChallengeMode.NICE) {
+                                if (met == true) {
+                                    challenge.KillCount += 1;
+                                    _ChallengeEvents.EmitChallengeUpdate(challenge);
+                                    _Logger.LogTrace($"Team {index}:{player.RunnerName} @{c.Name} met challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}, score mult {challenge.Challenge.Multiplier}");
+                                    score *= challenge.Challenge.Multiplier;
+                                }
+                            } else {
+                                _Logger.LogError($"Unknown challenge mode {_Challenges.GetMode()}");
+                            }
+
+                            if (challenge.Challenge.DurationType == ChallengeDurationType.KILLS && challenge.KillCount >= challenge.Challenge.Duration) {
+                                _Logger.LogDebug($"Team {index}:{player.RunnerName} @{c.Name} finished challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}");
+                                _Challenges.End(challenge.Index);
+                            }
+                        }
+
+                        if (score != 0) {
+                            player.Scores.Add(new ScoreEvent() {
+                                Timestamp = ev.Timestamp,
+                                ScoreChange = score,
+                                TotalScore = player.Score + score
+                            });
+                        }
+
+                        player.Score += score;
+
+                        _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} valid weapon {score} points, {weapon.Name}/{weapon.CategoryID}");
+                        _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} VALID kill {score} points, {weapon.Name}/{weapon.CategoryID}, faction {targetFactionID}");
+
+                        if (player.Score >= _Settings.KillGoal) {
+                            _Logger.LogInformation($"Player {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
+                            _MatchMessages.Log($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
+                            StopRound(player.Index);
+                        }
+                    } else {
+                        _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} invalid weapon, {weapon.Name}/{weapon.CategoryID}");
+                        _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} INVALID kill, {weapon.Name}/{weapon.CategoryID}, faction {targetFactionID}");
+                    }
+                } else {
+                    _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} UNKNOWN WEAPON {ev.WeaponID}, faction {targetFactionID}");
+                    _Logger.LogInformation($"Null weapon {ev.WeaponID}");
+                }
+
+                emit = true;
+            }
+
+            return emit;
+        }
+
+        private async void ExpHandler(object? sender, Ps2EventArgs<ExpEvent> args) {
             if (_State != MatchState.RUNNING) {
                 return;
             }
@@ -497,18 +540,20 @@ namespace watchtower.Services {
 
             runner.Exp.Add(ev);
 
-            if (_IsAssistEvent(ev.ExpID)) {
-                Character c = _GetCharacterFromID(ev.SourceID)
-                    ?? _GetCharacterFromID(ev.TargetID)
-                    ?? throw new ArgumentNullException($"Expected character ID {ev.SourceID} or {ev.TargetID} to exist, on team {runner.Index}:{runner.RunnerName}");
+            string direction = "SOURCE";
+            Character? c = _GetCharacterFromID(ev.SourceID);
 
-                _MatchMessages.Log($"Team {runner.Index}:{runner.RunnerName} @{c.Name} ASSIST");
+            if (c == null) {
+                direction = "TARGET";
+                c = _GetCharacterFromID(ev.TargetID);
             }
-        }
 
-        private bool _IsAssistEvent(int expID) {
-            return expID == Experience.ASSIST || expID == Experience.PRIORITY_ASSIST
-                || expID == Experience.SPAWN_ASSIST || expID == Experience.HIGH_PRIORITY_ASSIST;
+            if (c == null) {
+                direction = "UNKNOWN";
+            }
+
+            ExpEntry? entry = await _ExpCollection.GetByID(ev.ExpID);
+            _MatchMessages.Log($"Team {runner.Index}:{runner.RunnerName} @{c?.Name} {direction} {entry?.Description ?? $"missing ${ev.ExpID}"}");
         }
 
         private TrackedPlayer? _GetRunnerFromID(string charID) {

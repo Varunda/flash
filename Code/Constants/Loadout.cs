@@ -57,5 +57,32 @@ namespace watchtower.Constants {
             return Factions.UNKNOWN;
         }
 
+        public static bool IsTR(int loadoutID) {
+            return loadoutID == TR_INFILTRATOR
+                || loadoutID == TR_LIGHT_ASSAULT
+                || loadoutID == TR_MEDIC
+                || loadoutID == TR_ENGINEER
+                || loadoutID == TR_HEAVY_ASSAULT
+                || loadoutID == TR_MAX;
+        }
+
+        public static bool IsNC(int loadoutID) {
+            return loadoutID == NC_INFILTRATOR
+                || loadoutID == NC_LIGHT_ASSAULT
+                || loadoutID == NC_MEDIC
+                || loadoutID == NC_ENGINEER
+                || loadoutID == NC_HEAVY_ASSAULT
+                || loadoutID == NC_MAX;
+        }
+
+        public static bool IsVS(int loadoutID) {
+            return loadoutID == VS_INFILTRATOR
+                || loadoutID == VS_LIGHT_ASSAULT
+                || loadoutID == VS_MEDIC
+                || loadoutID == VS_ENGINEER
+                || loadoutID == VS_HEAVY_ASSAULT
+                || loadoutID == VS_MAX;
+        }
+
     }
 }

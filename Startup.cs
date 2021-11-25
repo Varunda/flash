@@ -20,6 +20,7 @@ using System.IO;
 using watchtower.Services.Db;
 using watchtower.Services.Hosted;
 using watchtower.Services.Implementations;
+using watchtower.Code.Census.Implementations;
 
 namespace watchtower {
 
@@ -46,8 +47,11 @@ namespace watchtower {
 
             services.AddSingleton<IRealtimeMonitor, RealtimeMonitor>();
             services.AddSingleton<IEventHandler, Realtime.EventHandler>();
+
             services.AddSingleton<ICharacterCollection, CharacterCollection>();
             services.AddSingleton<IItemCollection, ItemCollection>();
+            services.AddSingleton<ExperienceCollection, ExperienceCollection>();
+
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
             services.AddSingleton<ICommandBus, CommandBus>();
 
@@ -93,6 +97,8 @@ namespace watchtower {
             app.UseStaticFiles();
             app.UseRouting();
             app.UseEndpoints(endpoints => {
+                endpoints.MapControllerRoute("logs", "/logs/{action}", new { controller = "LogDownload" });
+
                 endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
             });

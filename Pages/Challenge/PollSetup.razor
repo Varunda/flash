@@ -136,6 +136,7 @@
     }
 
     private void StartPoll() {
+        _Options.Possible = _Active.Select(i => i.ID).ToList();
         _ChallengeManager.StartPoll(_Options);
     }
 

@@ -18,19 +18,27 @@ namespace watchtower.Services {
         public delegate void ClearHandler(object? sender);
 
         public void Log(string msg) {
-            _Messages.Insert(0, new Message() {
-                Timestamp = DateTime.UtcNow,
-                Content = msg
-            });
+            lock (_Messages) {
+                _Messages.Insert(0, new Message() {
+                    Timestamp = DateTime.UtcNow,
+                    Content = msg
+                });
+            }
             OnMessageEvent?.Invoke(this, new Ps2EventArgs<string>(msg));
         }
 
         public void Clear() {
-            _Messages.Clear();
+            lock (_Messages) {
+                _Messages.Clear();
+            }
             OnClearEvent?.Invoke(this, new Ps2EventArgs<int>(0));
         }
 
-        public List<Message> GetMessages() => new List<Message>(_Messages);
+        public List<Message> GetMessages() {
+            lock (_Messages) {
+                return new List<Message>(_Messages);
+            }
+        }
 
     }
 }

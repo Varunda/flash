@@ -4,6 +4,9 @@
 
 @inject IMatchEventBroadcastService _MatchEvents
 @inject IMatchManager _Match
+@inject IChallengeEventBroadcastService _ChallengeEvents
+
+@implements IDisposable
 
 <!--
 <img src="/font/example.png" style="position:absolute; z-index: -10;" />
@@ -76,6 +79,17 @@
         </span>
 
     </div>
+
+    <div class="d-hidden">
+        @if (_playStart == true) {
+            <audio autoplay src="/sounds/start_beep.mp3"></audio>
+        }
+
+        @if (_playEnd == true) {
+            <audio autoplay src="/sounds/end_beep.mp3"></audio>
+        }
+    </div>
+
 </div>
 
 
@@ -131,12 +145,10 @@
     }
 
     .overlay-wins-left {
-        /*border-right: 3px var(--color-primary) solid;*/
         text-align: end;
     }
 
     .overlay-wins-right {
-        /*border-left: 3px var(--color-primary) solid;*/
         text-align: start;
     }
 
@@ -180,6 +192,9 @@
     private double _p2HSR;
     */
 
+    private bool _playStart = false;
+    private bool _playEnd = false;
+
     protected override void OnInitialized() {
         base.OnInitialized();
 
@@ -187,12 +202,24 @@
         _MatchEvents.OnTimerEvent += OnTimerUpdate;
         _MatchEvents.OnMatchSettingsEvent += OnSettingsUpdate;
 
+        _ChallengeEvents.OnPollStarted += OnPollStarted;
+        _ChallengeEvents.OnPollEnded += OnPollEnded;
+
         _player1 = _Match.GetPlayer(0);
         _player2 = _Match.GetPlayer(1);
 
         _MatchSettings = _Match.GetSettings();
 
         UpdateWinCount();
+    }
+
+    public void Dispose() {
+        _MatchEvents.OnPlayerUpdateEvent -= OnPlayerUpdate;
+        _MatchEvents.OnTimerEvent -= OnTimerUpdate;
+        _MatchEvents.OnMatchSettingsEvent -= OnSettingsUpdate;
+
+        _ChallengeEvents.OnPollStarted -= OnPollStarted;
+        _ChallengeEvents.OnPollEnded -= OnPollEnded;
     }
 
     private void OnPlayerUpdate(object? sender, Ps2EventArgs<TrackedPlayer?> args) {
@@ -235,6 +262,30 @@
         UpdateWinCount();
 
         InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void OnPollStarted(object? sender, Ps2EventArgs<ChallengePollResults> args) {
+        _playStart = true;
+
+        InvokeAsync(async () => {
+            StateHasChanged();
+
+            await Task.Delay(5000);
+            _playStart = false;
+            StateHasChanged();
+        });
+    }
+
+    private void OnPollEnded(object? sender, Ps2EventArgs<ChallengePollResults> args) {
+        _playEnd = true;
+
+        InvokeAsync(async () => {
+            StateHasChanged();
+
+            await Task.Delay(5000);
+            _playEnd = false;
             StateHasChanged();
         });
     }
