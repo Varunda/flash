@@ -71,6 +71,11 @@ app {
     src: url("/font/Planetside2-mono.ttf");
 }
 
+@font-face {
+    font-family: shocs-dumb-font;
+    src: url("/font/NFS_by_JLTV.ttf");
+}
+
 .sr-player {
     position: absolute;
     font-family: ps2;

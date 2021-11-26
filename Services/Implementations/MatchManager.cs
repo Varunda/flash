@@ -428,31 +428,33 @@ namespace watchtower.Services {
                 //_Logger.LogInformation($"Player {index}:{player.RunnerName} kill");
                 player.Kills.Add(ev);
 
-                // Wait for the EXP events to show up
-                await Task.Delay(100);
+                if (targetFactionID == "4") {
+                    // Wait for the EXP events to show up
+                    await Task.Delay(1000);
 
-                ExpEvent? expEvent = null;
-                for (int i = player.Exp.Count - 1; i >= 0; --i) {
-                    ExpEvent exp = player.Exp[i];
-                    //_Logger.LogTrace($"Finding exp event from {i}, got {exp.ExpID} {exp.Timestamp}, looking for timestamp {ev.Timestamp}");
-                    if (exp.Timestamp < ev.Timestamp) {
-                        _Logger.LogTrace($"{exp.Timestamp} is less than {ev.Timestamp}, leaving now");
-                        break;
+                    ExpEvent? expEvent = null;
+                    for (int i = player.Exp.Count - 1; i >= 0; --i) {
+                        ExpEvent exp = player.Exp[i];
+                        //_Logger.LogTrace($"Finding exp event from {i}, got {exp.ExpID} {exp.Timestamp}, looking for timestamp {ev.Timestamp}");
+                        if (exp.Timestamp < ev.Timestamp) {
+                            _Logger.LogTrace($"{exp.Timestamp} is less than {ev.Timestamp}, leaving now");
+                            break;
+                        }
+
+                        if (exp.Timestamp == ev.Timestamp && Experience.IsKill(exp.ExpID)) {
+                            //_Logger.LogTrace($"Found {ev.Timestamp} in {exp.ExpID} {exp.Timestamp}");
+                            expEvent = exp;
+                            break;
+                        }
                     }
 
-                    if (exp.Timestamp == ev.Timestamp && Experience.IsKill(exp.ExpID)) {
-                        //_Logger.LogTrace($"Found {ev.Timestamp} in {exp.ExpID} {exp.Timestamp}");
-                        expEvent = exp;
-                        break;
+                    if (expEvent == null) {
+                        _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} Missing kill exp event, assuming to be a TK");
+                        return false;
                     }
                 }
 
-                if (expEvent == null) {
-                    _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} Missing kill exp event, assuming to be a TK");
-                    return false;
-                }
-
-                _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} exp event for kill: {expEvent?.ExpID.ToString() ?? $"<failed to find exp event for kill>"}");
+                _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} exp event for kill");
 
                 PsItem? weapon = await _ItemCollection.GetByID(ev.WeaponID);
                 if (weapon != null) {
