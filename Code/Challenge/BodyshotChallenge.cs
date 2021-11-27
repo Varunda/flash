@@ -7,11 +7,11 @@ using watchtower.Models;
 using watchtower.Models.Events;
 
 namespace watchtower.Code.Challenge {
-    public class AmaterasuChallenge : IRunChallenge {
+    public class BodyshotChallenge : IRunChallenge {
 
         public int ID => 22;
 
-        public string Name => "Why aim for head if u can't hit it";
+        public string Name => "BodyShotMasta";
 
         public string Description => "Get bodyshot kills";
 
@@ -21,10 +21,9 @@ namespace watchtower.Code.Challenge {
 
         public ChallengeDurationType DurationType => ChallengeDurationType.TIMED;
 
-
         public Task<bool> WasMet(KillEvent ev, PsItem? item)
         {
-            return Task.FromResult(ev.IsHeadshot == false);
+            return Task.FromResult(!(ev.IsHeadshot==true));
         }
     }
 }
