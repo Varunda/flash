@@ -38,7 +38,11 @@ namespace watchtower.Census {
                     return;
                 }
                 _Logger.LogTrace($"Caching {ID}");
-                _ = await GetByIDAsync(ID);
+                try {
+                    _ = await GetByIDAsync(ID);
+                } catch (Exception ex) {
+                    _Logger.LogError($"Cache for {ID} failed: {ex.Message}");
+                }
                 _Logger.LogTrace($"Cached  {ID}");
             }
         }
