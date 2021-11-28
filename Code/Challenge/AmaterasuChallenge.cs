@@ -7,6 +7,7 @@ using watchtower.Models;
 using watchtower.Models.Events;
 
 namespace watchtower.Code.Challenge {
+
     public class AmaterasuChallenge : IRunChallenge {
 
         public int ID => 21;
@@ -23,9 +24,9 @@ namespace watchtower.Code.Challenge {
 
         private const int AMATERASU = 804795;
 
-        public Task<bool> WasMet(KillEvent ev, PsItem? item)
-        {
+        public Task<bool> WasMet(KillEvent ev, PsItem? item) {
             return Task.FromResult(ev.WeaponID == AMATERASU);
         }
+
     }
 }

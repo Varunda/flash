@@ -131,7 +131,7 @@ namespace watchtower.Census {
                     return await _GetCharacterFromCensus(ID, false); 
                 } else {
                     _Logger.LogError(ex, "Failed to get {0} from API", ID);
-                    throw ex;
+                    return null;
                 }
             }
         }
@@ -154,7 +154,7 @@ namespace watchtower.Census {
                     return await _GetCharacterFromCensusByName(name, false); 
                 } else {
                     _Logger.LogError(ex, "Failed to get {0} from API", name);
-                    throw ex;
+                    return null;
                 }
             }
         }

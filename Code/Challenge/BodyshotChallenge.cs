@@ -7,6 +7,7 @@ using watchtower.Models;
 using watchtower.Models.Events;
 
 namespace watchtower.Code.Challenge {
+
     public class BodyshotChallenge : IRunChallenge {
 
         public int ID => 22;
@@ -21,9 +22,8 @@ namespace watchtower.Code.Challenge {
 
         public ChallengeDurationType DurationType => ChallengeDurationType.TIMED;
 
-        public Task<bool> WasMet(KillEvent ev, PsItem? item)
-        {
-            return Task.FromResult(!(ev.IsHeadshot==true));
+        public Task<bool> WasMet(KillEvent ev, PsItem? item) {
+            return Task.FromResult(ev.IsHeadshot == false);
         }
     }
 }
