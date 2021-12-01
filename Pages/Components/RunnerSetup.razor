@@ -138,9 +138,15 @@
         KillEvent ev = new KillEvent();
         ev.Timestamp = DateTime.UtcNow;
 
-        _player.ValidKills.Add(ev);
+        ScoreEvent scoreEvent = new ScoreEvent();
+        scoreEvent.ScoreChange = 1;
+        scoreEvent.Timestamp = DateTime.UtcNow;
+        scoreEvent.TotalScore = _player.Score + 1;
 
-        _Match.SetScore(Index, _player.Score + 1);
+        _player.ValidKills.Add(ev);
+        _player.Scores.Add(scoreEvent);
+
+        _Match.IncrementScore(Index);
 
         _AdminMessages.Log($"Manually added score to {Index}:{_player.RunnerName}, score is {_player.Score}");
     }

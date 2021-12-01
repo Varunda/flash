@@ -84,6 +84,8 @@ namespace watchtower.Services {
         /// <param name="score">Score to set the runner to</param>
         void SetScore(int index, int score);
 
+        void IncrementScore(int index);
+
         /// <summary>
         /// Get the score of a runner, or null if it doesn't exist
         /// </summary>

@@ -170,6 +170,13 @@ namespace watchtower.Services {
             }
         }
 
+        public void IncrementScore(int index) {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
+                player.Streak++;
+                SetScore(index, player.Score + 1);
+            }
+        }
+
         public void SetScore(int index, int score) {
             if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 player.Score = score;

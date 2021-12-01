@@ -1,9 +1,18 @@
 ﻿@import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
 
+/*
 :root {
     --color-primary: #e8b55c;
     --color-secondary: #373737;
     --color-primary-muted: #8d8d8d;
+}
+*/
+
+:root {
+    --color-primary: #ff0098;
+    --color-secondary: #ab00ff;
+    --color-muted: #000000;
+    --color-white: #e1e1e1;
 }
 
 html, body {

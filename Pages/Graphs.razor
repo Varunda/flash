@@ -66,6 +66,8 @@
     private TrackedPlayer? _player2 = null;
 
     private List<string> _DefaultColors = new List<string>() {
+        "#ff0098",
+        "#6600ff",
         "#1f77b4",
         "#ff7f0e",
         "#2ca02c",
@@ -218,7 +220,7 @@
                 new YAxis() {
                     //Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title() { Text = "Kills" },
                     LineWidth = 5,
-                    Color = "#e8b55c",
+                    Color = "#ff0098",
                     Range = new List<object>() { 0, _MatchSettings.KillGoal },
                 }
             },
@@ -228,16 +230,16 @@
                     TickMode = Plotly.Blazor.LayoutLib.XAxisLib.TickModeEnum.Array,
                     Tick0 = 0,
                     LineWidth = 5,
-                    Color = "#e8b55c",
-                    GridColor = "#cb9e51",
+                    Color = "#ff0098",
+                    GridColor = "#ab00ff",
                 }
             },
-            PlotBgColor = "#00373737",
-            PaperBgColor = "#00373737",
+            PlotBgColor = "#00000000",
+            PaperBgColor = "#00000000",
             Legend = new Legend() {
                 Font = new Plotly.Blazor.LayoutLib.LegendLib.Font() {
                     Family = "ps2",
-                    Color = "#e8b55c",
+                    Color = "#ff0098",
                     Size = 24
                 },
                 X = 0m,

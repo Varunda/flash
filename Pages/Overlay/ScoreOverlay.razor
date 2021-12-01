@@ -13,37 +13,53 @@
 -->
 
 <div class="sr-vertical-center">
-    <div class="overlay-parent sr-border">
+    <span>
+        @if (_player1 != null && _player1.Streak > 0) {
+            <span class="overlay-streak overlay-streak-left">
+                @_player1.Streak
+            </span>
+        } 
+    </span>
 
-        <span class="overlay-name overlay-name-left">
-            @if (_player1 != null) {
-                @_player1.RunnerName
-            }
-        </span>
+    <div class="overlay-border-wrap">
+        <div class="overlay-parent">
+            <span class="overlay-name overlay-name-left">
+                @if (_player1 != null) {
+                    @_player1.RunnerName
+                }
+            </span>
 
-        <span class="overlay-score overlay-score-left">
-            @if (_player1 != null) {
-                @_player1.Score
-            }
-        </span>
+            <span class="overlay-score overlay-score-left">
+                @if (_player1 != null) {
+                    @_player1.Score
+                }
+            </span>
 
-        <span style="width: 100px; text-align: center; font-family: ps2-mono; display: inline-block;">
-            <Timer Seconds="_MatchLength"></Timer>
-        </span>
+            <span style="width: 100px; text-align: center; font-family: ps2-mono; display: inline-block;">
+                <Timer Seconds="_MatchLength"></Timer>
+            </span>
 
-        <span class="overlay-score overlay-score-right">
-            @if (_player2 != null) {
-                @_player2.Score
-            }
-        </span>
+            <span class="overlay-score overlay-score-right">
+                @if (_player2 != null) {
+                    @_player2.Score
+                }
+            </span>
 
-        <span class="overlay-name overlay-name-right">
-            @if (_player2 != null) {
-                @_player2.RunnerName
-            }
-        </span>
-
+            <span class="overlay-name overlay-name-right">
+                @if (_player2 != null) {
+                    @_player2.RunnerName
+                }
+            </span>
+        </div>
     </div>
+
+    <span>
+        @if (_player2 != null && _player2.Streak > 0) {
+            <span class="overlay-streak overlay-streak-right">
+                @_player2.Streak
+            </span>
+        } 
+    </span>
 
     <div>
         <span class="overlay-wins overlay-wins-left">
@@ -77,7 +93,6 @@
                 }
             }
         </span>
-
     </div>
 
     <div class="d-hidden">
@@ -102,11 +117,18 @@
         font-family: ps2;
         font-size: 24pt;
         color: var(--color-primary);
-        background-color: var(--color-secondary);
+        background-color: var(--color-muted);
+    }
+
+    .overlay-border-wrap {
+        padding: 1rem;
+        position: relative;
+        background: linear-gradient(90deg, rgba(255,0,152,1) 0%, rgba(255,0,152,1) 40%, rgba(102,0,255,1) 60%, rgba(102,0,255,1) 100%);
+        padding: 3px;
+        display: inline-block;
     }
 
     .overlay-name {
-        width: 200px;
         display: inline-block;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -135,7 +157,7 @@
     }
 
     .overlay-score-right {
-        border-left: 3px var(--color-primary) solid;
+        border-left: 3px var(--color-secondary) solid;
         text-align: start;
     }
 
@@ -156,7 +178,7 @@
         border-radius: 12px;
         display: inline-block;
         height: 1rem;
-        width: 1rem;
+        width: 120px;
         margin-top: 0.25rem;
     }
 
@@ -165,7 +187,31 @@
     }
 
     .overlay-win-lose {
-        border: 8px var(--color-secondary) solid;
+        border: 8px var(--color-muted) solid;
+    }
+
+    .overlay-streak {
+        display: inline-block;
+        padding: 0 0.5rem;
+        font-family: ps2-mono;
+        font-size: 24pt;
+        color: var(--color-primary);
+        background-color: var(--color-muted);
+        margin-top: 0.25rem;
+        border: 3px;
+        border-style: solid;
+        border-radius: 30px;
+        line-height: 1.2;
+    }
+
+    .overlay-streak-left {
+        text-align: end;
+        border-color: var(--color-primary);
+    }
+
+    .overlay-streak-right {
+        text-align: right;
+        border-color: var(--color-secondary);
     }
 
 </style>
@@ -179,18 +225,6 @@
     private MatchSettings _MatchSettings = default!;
 
     public int _RoundCount = 0;
-
-    /*
-    private double _p1KD;
-    private double _p1KPM;
-    private int _p1Left;
-    private double _p1HSR;
-
-    private double _p2KD;
-    private double _p2KPM;
-    private int _p2Left;
-    private double _p2HSR;
-    */
 
     private bool _playStart = false;
     private bool _playEnd = false;
@@ -228,34 +262,8 @@
         if (player != null) {
             if (player.Index == 0) {
                 _player1 = player;
-
-                /*
-                _p1KD = (double) _player1.Score / Math.Max(1D, (double) _player1.Deaths.Count);
-                if (_player1.Kills.Count == 0) {
-                    _p1Left = 0;
-                } else {
-                    int killsLeft = _MatchSettings.KillGoal - _player1.Score;
-                    double left = Math.Round((double) killsLeft / (_p1KPM / 60));
-                    _p1Left = (int) left;
-                }
-
-                _p1HSR = (((double) Math.Max(1, _player1.ValidKills.Where(iter => iter.IsHeadshot == true).Count()) / ((double) _player1.ValidKills.Count))) * 100;
-                */
             } else if (player.Index == 1) {
                 _player2 = player;
-
-                /*
-                _p2KD = (double) _player2.Score / Math.Max(2D, (double) _player2.Deaths.Count);
-                if (_player2.Kills.Count == 0) {
-                    _p2Left = 0;
-                } else {
-                    int killsLeft = _MatchSettings.KillGoal - _player2.Score;
-                    double left = Math.Round((double) killsLeft / (_p2KPM / 60));
-                    _p2Left = (int) left;
-                }
-
-                _p2HSR = (((double) Math.Max(1, _player2.ValidKills.Where(iter => iter.IsHeadshot == true).Count()) / ((double) _player2.ValidKills.Count))) * 100;
-                */
             }
         }
 
