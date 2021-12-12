@@ -11,9 +11,8 @@
 <!--
 <img src="/font/example.png" style="position:absolute; z-index: -10;" />
 -->
-
 <div class="sr-vertical-center">
-    <!--
+    
     <span>
         @if (_player1 != null && _player1.Streak > 0) {
             <span class="overlay-streak overlay-streak-left">
@@ -21,7 +20,6 @@
             </span>
         } 
     </span>
-    -->
 
     <div class="overlay-border-wrap">
         <div class="overlay-parent">
@@ -34,6 +32,10 @@
             <span class="overlay-score overlay-score-left">
                 @if (_player1 != null) {
                     @_player1.Score
+                    @if (_player1.Score > 9) 
+                    {
+                        <div class="circle"></div>
+                    }
                 }
             </span>
 
@@ -44,6 +46,10 @@
             <span class="overlay-score overlay-score-right">
                 @if (_player2 != null) {
                     @_player2.Score
+                    @if (_player2.Score > 9) 
+                    {
+                        <div class="circle"></div>
+                    }
                 }
             </span>
 
@@ -55,7 +61,7 @@
         </div>
     </div>
 
-    <!--
+    
     <span>
         @if (_player2 != null && _player2.Streak > 0) {
             <span class="overlay-streak overlay-streak-right">
@@ -63,7 +69,7 @@
             </span>
         } 
     </span>
-    -->
+    
 
     <div>
         <span class="overlay-wins overlay-wins-left">
@@ -111,27 +117,24 @@
 
 </div>
 
-
 <style>
+
     .table td {
         border-top: unset !important;
     }
-
     .overlay-parent {
         font-family: ps2;
         font-size: 24pt;
         color: var(--color-primary);
         background-color: var(--color-muted);
     }
-
     .overlay-border-wrap {
         padding: 1rem;
         position: relative;
-        background: linear-gradient(90deg, rgba(255,0,152,1) 0%, rgba(255,0,152,1) 40%, rgba(102,0,255,1) 60%, rgba(102,0,255,1) 100%);
+        background: linear-gradient(90deg, rgba(255, 0, 152, 1) 0%, rgba(255, 0, 152, 1) 40%, rgba(102, 0, 255, 1) 60%, rgba(102, 0, 255, 1) 100%);
         padding: 3px;
         display: inline-block;
     }
-
     .overlay-name {
         display: inline-block;
         overflow: hidden;
@@ -139,46 +142,37 @@
         vertical-align: top;
         width: 200px;
     }
-
     .overlay-name-left {
         text-align: start;
         padding-left: 0.5rem;
     }
-
     .overlay-name-right {
         text-align: end;
         padding-right: 0.5rem;
     }
-
     .overlay-score {
         display: inline-block;
         width: 70px;
         padding: 0 0.5rem;
     }
-
     .overlay-score-left {
         border-right: 3px var(--color-primary) solid;
         text-align: end;
     }
-
     .overlay-score-right {
         border-left: 3px var(--color-secondary) solid;
         text-align: start;
     }
-
     .overlay-wins {
         display: inline-block;
         padding: 0 0.5rem;
     }
-
     .overlay-wins-left {
         text-align: end;
     }
-
     .overlay-wins-right {
         text-align: start;
     }
-
     .overlay-indicator {
         border-radius: 12px;
         display: inline-block;
@@ -186,15 +180,12 @@
         width: 1rem;
         margin-top: 0.25rem;
     }
-
     .overlay-win-win {
         border: 8px var(--color-primary) solid;
     }
-
     .overlay-win-lose {
         border: 8px var(--color-muted) solid;
     }
-
     .overlay-streak {
         display: inline-block;
         padding: 0 0.5rem;
@@ -208,17 +199,101 @@
         border-radius: 30px;
         line-height: 1.2;
     }
-
     .overlay-streak-left {
         text-align: end;
         border-color: var(--color-primary);
     }
-
     .overlay-streak-right {
         text-align: right;
         border-color: var(--color-secondary);
     }
 
+    .circle{
+        position:relative;
+        width:100px;
+        height:100px;
+    }
+
+    .circle:before
+    {
+        content:'';
+        position:absolute;
+        top: 17px;
+        right: 17px;
+        left: 17px;
+        bottom: 17px;
+        border: 2px #ffffff solid;
+        border-radius: 50%;
+        box-shadow: 0 0 13px #0f0, 
+                    inset 0 0 13px #0f0;
+        -webkit-box-reflect: below 2px linearq-gradient(transparent, transparent, #002);
+        animation: animate 5s linear infinite;
+    }
+
+    .circle:nth-child(2):before
+    {
+        animation: delay -2.5s;
+    }
+
+    @@keyframes animate {
+        0%
+        {
+            box-shadow: 0 0 8px #0f0, 
+                    inset 0 0 8px #0f0;
+            filter: hue-rotate(0deg);
+        }
+        20%
+        {
+            box-shadow: 0 0 10px #0f0, 
+                    inset 0 0 10px #0f0;
+            
+        }
+        40%
+        {
+            box-shadow: 0 0 7px #0f0, 
+                    inset 0 0 7px #0f0;
+            
+        }
+        60%
+        {
+            box-shadow: 0 0 13px #0f0, 
+                    inset 0 0 13px #0f0;
+            
+        }
+        80%
+        {
+            box-shadow: 0 0 17px #0f0, 
+                    inset 0 0 17px #0f0;
+            
+        }
+        100%
+        {
+            box-shadow: 0 0 8px #0f0, 
+                    inset 0 0 8px #0f0;
+            filter: hue-rotate(360deg);
+            
+        }
+    }
+
+    .circle span:nth-child(1)
+    {
+        filter:blur(5px);
+    }
+
+    .circle span:nth-child(2)
+    {
+        filter:blur(10px);
+    }
+
+    .circle span:nth-child(3)
+    {
+        filter:blur(20px);
+    }
+    
+    .circle span:nth-child(4)
+    {
+        filter:blur(55px);
+    }
 </style>
 
 @code {
@@ -305,7 +380,6 @@
 
     private void OnTimerUpdate(object? sender, Ps2EventArgs<int> args) {
         _MatchLength = args.Payload;
-
         /*
         if (_player1 != null) {
             _p1KPM = (double) _player1.ValidKills.Count / Math.Max(1D, (double) _MatchLength) * 60D;
