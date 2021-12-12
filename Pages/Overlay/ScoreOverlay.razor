@@ -34,7 +34,9 @@
                     @_player1.Score
                     @if (_player1.Score > 9) 
                     {
-                        <div class="circle"></div>
+                        <div class="sr-vertical-center">
+                        <div class="circle-left"></div>
+                        </div>
                     }
                 }
             </span>
@@ -48,7 +50,9 @@
                     @_player2.Score
                     @if (_player2.Score > 9) 
                     {
-                        <div class="circle"></div>
+                        <div class="sr-vertical-center">
+                        <div class="circle-right"></div>
+                        </div>
                     }
                 }
             </span>
@@ -208,13 +212,13 @@
         border-color: var(--color-secondary);
     }
 
-    .circle{
+    .circle-left{
         position:relative;
         width:100px;
         height:100px;
     }
 
-    .circle:before
+    .circle-left:before
     {
         content:'';
         position:absolute;
@@ -230,7 +234,7 @@
         animation: animate 5s linear infinite;
     }
 
-    .circle:nth-child(2):before
+    .circle-left:nth-child(2):before
     {
         animation: delay -2.5s;
     }
@@ -275,22 +279,109 @@
         }
     }
 
-    .circle span:nth-child(1)
+    .circle-left span:nth-child(1)
     {
         filter:blur(5px);
     }
 
-    .circle span:nth-child(2)
+    .circle-left span:nth-child(2)
     {
         filter:blur(10px);
     }
 
-    .circle span:nth-child(3)
+    .circle-left span:nth-child(3)
     {
         filter:blur(20px);
     }
     
-    .circle span:nth-child(4)
+    .circle-left span:nth-child(4)
+    {
+        filter:blur(55px);
+    }
+
+    .circle-right{
+        position:relative;
+        width:100px;
+        height:100px;
+    }
+
+    .circle-right:before
+    {
+        content:'';
+        position:absolute;
+        top: 17px;
+        right: 17px;
+        left: 17px;
+        bottom: 17px;
+        border: 2px #ffffff solid;
+        border-radius: 50%;
+        box-shadow: 0 0 13px #0f0, 
+                    inset 0 0 13px #0f0;
+        -webkit-box-reflect: below 2px linearq-gradient(transparent, transparent, #002);
+        animation: animate 5s linear infinite;
+    }
+
+    .circle-right:nth-child(2):before
+    {
+        animation: delay -2.5s;
+    }
+
+    @@keyframes animate {
+        0%
+        {
+            box-shadow: 0 0 8px #0f0, 
+                    inset 0 0 8px #0f0;
+            filter: hue-rotate(0deg);
+        }
+        20%
+        {
+            box-shadow: 0 0 10px #0f0, 
+                    inset 0 0 10px #0f0;
+            
+        }
+        40%
+        {
+            box-shadow: 0 0 7px #0f0, 
+                    inset 0 0 7px #0f0;
+            
+        }
+        60%
+        {
+            box-shadow: 0 0 13px #0f0, 
+                    inset 0 0 13px #0f0;
+            
+        }
+        80%
+        {
+            box-shadow: 0 0 17px #0f0, 
+                    inset 0 0 17px #0f0;
+            
+        }
+        100%
+        {
+            box-shadow: 0 0 8px #0f0, 
+                    inset 0 0 8px #0f0;
+            filter: hue-rotate(360deg);
+            
+        }
+    }
+
+    .circle-right span:nth-child(1)
+    {
+        filter:blur(5px);
+    }
+
+    .circle-right span:nth-child(2)
+    {
+        filter:blur(10px);
+    }
+
+    .circle-right span:nth-child(3)
+    {
+        filter:blur(20px);
+    }
+    
+    .circle-right span:nth-child(4)
     {
         filter:blur(55px);
     }
