@@ -14,9 +14,11 @@ using watchtower.Models.Census;
 using watchtower.Models.Events;
 using watchtower.Realtime;
 
-namespace watchtower.Services {
+namespace watchtower.Services
+{
 
-    public class MatchManager : IMatchManager {
+    public class MatchManager : IMatchManager
+    {
 
         const double TICKS_PER_SECOND = 10000000D;
 
@@ -50,7 +52,8 @@ namespace watchtower.Services {
                 IRealtimeMonitor realtime, IChallengeEventBroadcastService challengeEvents,
                 IMatchMessageBroadcastService matchMessages, IAdminMessageBroadcastService adminMessages,
                 IChallengeManager challenges, ISecondTimer timer,
-                ExperienceCollection expColl) {
+                ExperienceCollection expColl)
+        {
 
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -74,16 +77,20 @@ namespace watchtower.Services {
             AddListeners();
         }
 
-        private void AddListeners() {
+        private void AddListeners()
+        {
             _RealtimeEvents.OnKillEvent += KillHandler;
             _RealtimeEvents.OnExpEvent += ExpHandler;
 
             _Timer.OnTick += OnTick;
         }
 
-        public async Task<bool> AddCharacter(int index, string charName) {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == false) {
-                player = new TrackedPlayer {
+        public async Task<bool> AddCharacter(int index, string charName)
+        {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == false)
+            {
+                player = new TrackedPlayer
+                {
                     Index = index,
                     RunnerName = $"Runner {index + 1}"
                 };
@@ -93,31 +100,36 @@ namespace watchtower.Services {
                 _AdminMessages.Log($"Created team {player.Index}:{player.RunnerName}");
             }
 
-            foreach (Character c in player.Characters) {
-                if (c.Name.ToLower() == charName.ToLower()) {
+            foreach (Character c in player.Characters)
+            {
+                if (c.Name.ToLower() == charName.ToLower())
+                {
                     _Logger.LogWarning($"Not adding duplicate players {charName}");
                     return true;
                 }
             }
 
             Character? ch = await _CharacterColleciton.GetByNameAsync(charName);
-            if (ch == null) {
+            if (ch == null)
+            {
                 _Logger.LogWarning($"Failed to add character {charName} to Runner {index}, does not exist");
                 return false;
             }
 
-            if (player.RunnerName == $"Runner {index + 1}") {
+            if (player.RunnerName == $"Runner {index + 1}")
+            {
                 _AdminMessages.Log($"Renamed team {index}:{player.RunnerName} to {ch.Name}");
                 player.RunnerName = ch.Name;
             }
 
             player.Characters.Add(ch);
 
-            _Realtime.Subscribe(new Subscription() {
+            _Realtime.Subscribe(new Subscription()
+            {
                 Characters = { ch.ID },
-                Events = { 
+                Events = {
                     "Death",
-                    "GainExperience" 
+                    "GainExperience"
                 }
             });
 
@@ -128,32 +140,40 @@ namespace watchtower.Services {
             return true;
         }
 
-        public void RemoveCharacter(int index, string charName) {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
+        public void RemoveCharacter(int index, string charName)
+        {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
+            {
                 player.Characters = player.Characters.Where(iter => iter.Name.ToLower() != charName.ToLower()).ToList();
                 _AdminMessages.Log($"Team {index}:{player.RunnerName} removed character {charName}");
-            } else {
+            }
+            else
+            {
                 _Logger.LogWarning($"Cannot remove {charName} from player {index} cause it wasn't found");
             }
         }
 
 
-        public void SetSettings(MatchSettings settings) {
-            if (_State == MatchState.RUNNING) {
+        public void SetSettings(MatchSettings settings)
+        {
+            if (_State == MatchState.RUNNING)
+            {
                 _Logger.LogWarning($"Match is currently running, some settings may create funky behavior");
             }
 
             _Settings = settings;
 
             _Logger.LogInformation($"Match settings:" +
-                $"\n\tKillGoal: {_Settings.KillGoal}"
+                $"\n\tKillGoal: {_Settings.KillGoal}" + $"\n\tTimeGoal:{_Settings.TimeGoal}"
             );
 
             _MatchEvents.EmitMatchSettingsEvent(_Settings);
         }
 
-        public void SetAutoChallengeSettings(AutoChallengeSettings auto) {
-            if (_State == MatchState.RUNNING) {
+        public void SetAutoChallengeSettings(AutoChallengeSettings auto)
+        {
+            if (_State == MatchState.RUNNING)
+            {
                 _Logger.LogWarning($"Not changing auto challenge settings, as match is running");
                 return;
             }
@@ -162,37 +182,54 @@ namespace watchtower.Services {
             _MatchEvents.EmitAutoSettingsChange(_AutoSettings);
         }
 
-        public void SetRunnerName(int index, string? runnerName) {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
+        public void SetRunnerName(int index, string? runnerName)
+        {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
+            {
                 player.RunnerName = runnerName ?? $"Runner {index + 1}";
-            } else {
+            }
+            else
+            {
                 _Logger.LogWarning($"Cannot set runner name for {index}, not in _Players");
             }
         }
 
-        public void IncrementScore(int index) {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
+        public void IncrementScore(int index)
+        {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
+            {
                 player.Streak++;
-                SetScore(index, player.Score + 1);
+                if (_Settings.KillGoal != 0)
+                {
+                    SetScore(index, player.Score + 1);
+                }
             }
         }
 
-        public void SetScore(int index, int score) {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
+        public void SetScore(int index, int score)
+        {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
+            {
                 player.Score = score;
                 _MatchEvents.EmitPlayerUpdateEvent(player.Index, player);
-
-                if (player.Score >= _Settings.KillGoal) {
+                _MatchMessages.Log($"{_Settings.KillGoal}");
+                if (player.Score >= _Settings.KillGoal)
+                {
                     _MatchMessages.Log($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
                     StopRound(index);
                 }
-            } else {
+
+            }
+            else
+            {
                 _Logger.LogWarning($"Cannot set score of runner {index}, _Players does not contain");
             }
         }
 
-        public int? GetScore(int index) {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
+        public int? GetScore(int index)
+        {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
+            {
                 return player.Score;
             }
 
@@ -200,16 +237,29 @@ namespace watchtower.Services {
             return null;
         }
 
-        public TrackedPlayer? GetPlayer(int index) {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
+        public TrackedPlayer? GetPlayer(int index)
+        {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
+            {
                 return player;
             }
             return null;
         }
 
-        private void OnTick(object? sender, SecondTimerArgs args) {
-            if (_State != MatchState.RUNNING) {
+        private void OnTick(object? sender, SecondTimerArgs args)
+        {
+            if (_State != MatchState.RUNNING)
+            {
                 return;
+            }
+
+            if (_Settings.TimeGoal != 0)
+            {
+                if (GetMatchLength() >= _Settings.TimeGoal - 1)
+                {
+                    _MatchMessages.Log($"Time goal reached, ending match");
+                    StopRound(null);
+                }
             }
 
             _MatchTicks += args.ElapsedTicks;
@@ -218,15 +268,19 @@ namespace watchtower.Services {
 
             _MatchEvents.EmitTimerEvent(matchLength);
 
-            if (_AutoSettings.Enabled) {
-                if ((matchLength - _AutoSettings.StartDelay) % _AutoSettings.Interval == 0) {
+            if (_AutoSettings.Enabled)
+            {
+                if ((matchLength - _AutoSettings.StartDelay) % _AutoSettings.Interval == 0)
+                {
                     _Logger.LogInformation($"Starting new auto challenge");
                     StartAutoChallenge();
                 }
             }
 
-            foreach (IndexedChallenge entry in _Challenges.GetRunning()) {
-                if (entry.Challenge.DurationType != ChallengeDurationType.TIMED) {
+            foreach (IndexedChallenge entry in _Challenges.GetRunning())
+            {
+                if (entry.Challenge.DurationType != ChallengeDurationType.TIMED)
+                {
                     continue;
                 }
 
@@ -235,20 +289,24 @@ namespace watchtower.Services {
 
                 _ChallengeEvents.EmitChallengeUpdate(entry);
 
-                if ((int) Math.Round(entry.TickCount / TICKS_PER_SECOND) > entry.Challenge.Duration) {
+                if ((int)Math.Round(entry.TickCount / TICKS_PER_SECOND) > entry.Challenge.Duration)
+                {
                     _Logger.LogDebug($"{entry.Index} {entry.Challenge.ID}/{entry.Challenge.Name} done");
                     _Challenges.End(entry.Index);
                 }
             }
         }
 
-        public void StartRound() {
-            if (_State == MatchState.RUNNING) {
+        public void StartRound()
+        {
+            if (_State == MatchState.RUNNING)
+            {
                 _Logger.LogWarning($"Not starting match, already started");
                 return;
             }
 
-            if (_State == MatchState.UNSTARTED) {
+            if (_State == MatchState.UNSTARTED)
+            {
                 _MatchTicks = 0;
                 _MatchStart = DateTime.UtcNow;
                 _AdminMessages.Log($"Match unstarted, resetting ticks and start");
@@ -259,8 +317,10 @@ namespace watchtower.Services {
             _AdminMessages.Log($"Match started at {_MatchStart}");
         }
 
-        public void ClearMatch() {
-            foreach (TrackedPlayer player in GetPlayers()) {
+        public void ClearMatch()
+        {
+            foreach (TrackedPlayer player in GetPlayers())
+            {
                 player.Score = 0;
                 player.Scores = new List<ScoreEvent>();
                 player.Kills = new List<KillEvent>();
@@ -289,14 +349,16 @@ namespace watchtower.Services {
             _AdminMessages.Log($"Match cleared at {DateTime.UtcNow}");
         }
 
-        public void RestartRound() {
+        public void RestartRound()
+        {
             _MatchStart = DateTime.UtcNow;
             _MatchEnd = null;
             _MatchTicks = 0;
 
             _MatchEvents.EmitTimerEvent(0);
 
-            foreach (TrackedPlayer player in GetPlayers()) {
+            foreach (TrackedPlayer player in GetPlayers())
+            {
                 player.Score = 0;
                 player.Scores = new List<ScoreEvent>();
                 player.Kills = new List<KillEvent>();
@@ -312,20 +374,26 @@ namespace watchtower.Services {
             _AdminMessages.Log($"Match restarted at {DateTime.UtcNow}");
         }
 
-        public void PauseRound() {
+        public void PauseRound()
+        {
             SetState(MatchState.PAUSED);
 
             _AdminMessages.Log($"Round paused at {DateTime.UtcNow}");
         }
 
-        public void StopRound(int? winnerIndex = null) {
+        public void StopRound(int? winnerIndex = null)
+        {
             _MatchEnd = DateTime.UtcNow;
 
-            if (winnerIndex != null) {
-                if (_Players.TryGetValue(winnerIndex.Value, out TrackedPlayer? runner) == true) {
+            if (winnerIndex != null)
+            {
+                if (_Players.TryGetValue(winnerIndex.Value, out TrackedPlayer? runner) == true)
+                {
                     runner.Wins += 1;
                     _MatchEvents.EmitPlayerUpdateEvent(runner.Index, runner);
-                } else {
+                }
+                else
+                {
                     _Logger.LogWarning($"Cannot set winner to index {winnerIndex.Value}, _Players does not have");
                 }
             }
@@ -336,19 +404,23 @@ namespace watchtower.Services {
             SetState(MatchState.FINISHED);
         }
 
-        private void StartAutoChallenge() {
-            if (_AutoSettings.OptionCount <= 0) {
+        private void StartAutoChallenge()
+        {
+            if (_AutoSettings.OptionCount <= 0)
+            {
                 _Logger.LogWarning($"Cannot start auto poll, there are 0 options");
                 return;
             }
 
             List<IRunChallenge> challenges = _Challenges.GetActive().Shuffle();
-            if (_AutoSettings.OptionCount > challenges.Count) {
+            if (_AutoSettings.OptionCount > challenges.Count)
+            {
                 _Logger.LogWarning($"Setting auto challenge option count to {challenges.Count}, was {_AutoSettings.OptionCount}, which is more than options available");
                 _AutoSettings.OptionCount = challenges.Count;
             }
 
-            ChallengePollOptions options = new ChallengePollOptions() {
+            ChallengePollOptions options = new ChallengePollOptions()
+            {
                 Possible = challenges.Take(_AutoSettings.OptionCount).Select(i => i.ID).ToList(),
                 VoteTime = _AutoSettings.PollTime
             };
@@ -356,8 +428,10 @@ namespace watchtower.Services {
             _Challenges.StartPoll(options);
         }
 
-        private void SetState(MatchState state) {
-            if (_State == state) {
+        private void SetState(MatchState state)
+        {
+            if (_State == state)
+            {
                 _Logger.LogDebug($"Not setting match state to {state}, is the current one");
                 return;
             }
@@ -366,8 +440,10 @@ namespace watchtower.Services {
             _MatchEvents.EmitMatchStateEvent(_State);
         }
 
-        private async void KillHandler(object? sender, Ps2EventArgs<KillEvent> args) {
-            if (_State != MatchState.RUNNING) {
+        private async void KillHandler(object? sender, Ps2EventArgs<KillEvent> args)
+        {
+            if (_State != MatchState.RUNNING)
+            {
                 return;
             }
 
@@ -376,18 +452,22 @@ namespace watchtower.Services {
             string sourceFactionID = Loadout.GetFaction(ev.LoadoutID);
             string targetFactionID = Loadout.GetFaction(ev.TargetLoadoutID);
 
-            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players) {
+            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players)
+            {
                 int index = entry.Key;
                 TrackedPlayer player = entry.Value;
 
                 bool emit = false;
 
-                foreach (Character c in player.Characters) {
-                    if (ev.SourceID == c.ID && ev.TargetID == c.ID) {
+                foreach (Character c in player.Characters)
+                {
+                    if (ev.SourceID == c.ID && ev.TargetID == c.ID)
+                    {
                         _Logger.LogInformation($"Player {index} committed suicide");
                         _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} SUICIDE");
 
-                        if (player.Streak > 1) {
+                        if (player.Streak > 1)
+                        {
                             player.Streaks.Add(player.Streak);
                             player.Streak = 0;
                         }
@@ -395,10 +475,15 @@ namespace watchtower.Services {
                         player.Deaths.Add(ev);
 
                         emit = true;
-                    } else if (c.ID == ev.SourceID) {
+                    }
+                    else if (c.ID == ev.SourceID)
+                    {
                         emit = await HandleNotTKKill(args, index, player, c);
-                    } else if (c.ID == ev.TargetID) {
-                        if (player.Streak > 1) {
+                    }
+                    else if (c.ID == ev.TargetID)
+                    {
+                        if (player.Streak > 1)
+                        {
                             player.Streaks.Add(player.Streak);
                         }
                         player.Streak = 0;
@@ -409,18 +494,22 @@ namespace watchtower.Services {
                         _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} DEATH, faction {sourceFactionID}");
 
                         emit = true;
-                    } else {
+                    }
+                    else
+                    {
                         //_Logger.LogInformation($"Kill source:{ev.SourceID}, target:{ev.TargetID} was not {player.ID}");
                     }
                 }
 
-                if (emit == true) {
+                if (emit == true)
+                {
                     _MatchEvents.EmitPlayerUpdateEvent(index, player);
                 }
             }
         }
 
-        private async Task<bool> HandleNotTKKill(Ps2EventArgs<KillEvent> args, int index, TrackedPlayer player, Character c) {
+        private async Task<bool> HandleNotTKKill(Ps2EventArgs<KillEvent> args, int index, TrackedPlayer player, Character c)
+        {
             KillEvent ev = args.Payload;
 
             string sourceFactionID = Loadout.GetFaction(ev.LoadoutID);
@@ -428,34 +517,42 @@ namespace watchtower.Services {
 
             bool emit = false;
 
-            if (sourceFactionID == targetFactionID) {
+            if (sourceFactionID == targetFactionID)
+            {
                 _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} TK");
                 _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} got a TK");
-            } else {
+            }
+            else
+            {
                 //_Logger.LogInformation($"Player {index}:{player.RunnerName} kill");
                 player.Kills.Add(ev);
 
-                if (targetFactionID == "4") {
+                if (targetFactionID == "4")
+                {
                     // Wait for the EXP events to show up
                     await Task.Delay(1000);
 
                     ExpEvent? expEvent = null;
-                    for (int i = player.Exp.Count - 1; i >= 0; --i) {
+                    for (int i = player.Exp.Count - 1; i >= 0; --i)
+                    {
                         ExpEvent exp = player.Exp[i];
                         //_Logger.LogTrace($"Finding exp event from {i}, got {exp.ExpID} {exp.Timestamp}, looking for timestamp {ev.Timestamp}");
-                        if (exp.Timestamp < ev.Timestamp) {
+                        if (exp.Timestamp < ev.Timestamp)
+                        {
                             _Logger.LogTrace($"{exp.Timestamp} is less than {ev.Timestamp}, leaving now");
                             break;
                         }
 
-                        if (exp.Timestamp == ev.Timestamp && Experience.IsKill(exp.ExpID)) {
+                        if (exp.Timestamp == ev.Timestamp && Experience.IsKill(exp.ExpID))
+                        {
                             //_Logger.LogTrace($"Found {ev.Timestamp} in {exp.ExpID} {exp.Timestamp}");
                             expEvent = exp;
                             break;
                         }
                     }
 
-                    if (expEvent == null) {
+                    if (expEvent == null)
+                    {
                         _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} Missing kill exp event, assuming to be a TK");
                         return false;
                     }
@@ -464,44 +561,59 @@ namespace watchtower.Services {
                 _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} exp event for kill");
 
                 PsItem? weapon = await _ItemCollection.GetByID(ev.WeaponID);
-                if (weapon != null) {
-                    if (ItemCategory.IsValidSpeedrunnerWeapon(weapon) == true) {
+                if (weapon != null)
+                {
+                    if (ItemCategory.IsValidSpeedrunnerWeapon(weapon) == true)
+                    {
                         player.Streak += 1;
                         player.ValidKills.Add(ev);
 
                         int score = 1;
 
                         List<IndexedChallenge> runningChallenges = _Challenges.GetRunning();
-                        foreach (IndexedChallenge challenge in runningChallenges) {
+                        foreach (IndexedChallenge challenge in runningChallenges)
+                        {
                             bool met = await challenge.Challenge.WasMet(ev, weapon);
 
-                            if (_Challenges.GetMode() == ChallengeMode.MEAN) {
-                                if (met == false) {
+                            if (_Challenges.GetMode() == ChallengeMode.MEAN)
+                            {
+                                if (met == false)
+                                {
                                     _Logger.LogTrace($"Team {index}:{player.RunnerName} @{c.Name} failed challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}");
                                     score = 0;
-                                } else {
+                                }
+                                else
+                                {
                                     challenge.KillCount += 1;
                                     _ChallengeEvents.EmitChallengeUpdate(challenge);
                                 }
-                            } else if (_Challenges.GetMode() == ChallengeMode.NICE) {
-                                if (met == true) {
+                            }
+                            else if (_Challenges.GetMode() == ChallengeMode.NICE)
+                            {
+                                if (met == true)
+                                {
                                     challenge.KillCount += 1;
                                     _ChallengeEvents.EmitChallengeUpdate(challenge);
                                     _Logger.LogTrace($"Team {index}:{player.RunnerName} @{c.Name} met challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}, score mult {challenge.Challenge.Multiplier}");
                                     score *= challenge.Challenge.Multiplier;
                                 }
-                            } else {
+                            }
+                            else
+                            {
                                 _Logger.LogError($"Unknown challenge mode {_Challenges.GetMode()}");
                             }
 
-                            if (challenge.Challenge.DurationType == ChallengeDurationType.KILLS && challenge.KillCount >= challenge.Challenge.Duration) {
+                            if (challenge.Challenge.DurationType == ChallengeDurationType.KILLS && challenge.KillCount >= challenge.Challenge.Duration)
+                            {
                                 _Logger.LogDebug($"Team {index}:{player.RunnerName} @{c.Name} finished challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}");
                                 _Challenges.End(challenge.Index);
                             }
                         }
 
-                        if (score != 0) {
-                            player.Scores.Add(new ScoreEvent() {
+                        if (score != 0)
+                        {
+                            player.Scores.Add(new ScoreEvent()
+                            {
                                 Timestamp = ev.Timestamp,
                                 ScoreChange = score,
                                 TotalScore = player.Score + score
@@ -513,16 +625,21 @@ namespace watchtower.Services {
                         _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} valid weapon {score} points, {weapon.Name}/{weapon.CategoryID}");
                         _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} VALID kill {score} points, {weapon.Name}/{weapon.CategoryID}, faction {targetFactionID}");
 
-                        if (player.Score >= _Settings.KillGoal) {
+                        if (player.Score >= _Settings.KillGoal && _Settings.KillGoal != 0)
+                        {
                             _Logger.LogInformation($"Player {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
                             _MatchMessages.Log($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
                             StopRound(player.Index);
                         }
-                    } else {
+                    }
+                    else
+                    {
                         _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} invalid weapon, {weapon.Name}/{weapon.CategoryID}");
                         _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} INVALID kill, {weapon.Name}/{weapon.CategoryID}, faction {targetFactionID}");
                     }
-                } else {
+                }
+                else
+                {
                     _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} UNKNOWN WEAPON {ev.WeaponID}, faction {targetFactionID}");
                     _Logger.LogInformation($"Null weapon {ev.WeaponID}");
                 }
@@ -533,19 +650,23 @@ namespace watchtower.Services {
             return emit;
         }
 
-        private async void ExpHandler(object? sender, Ps2EventArgs<ExpEvent> args) {
-            if (_State != MatchState.RUNNING) {
+        private async void ExpHandler(object? sender, Ps2EventArgs<ExpEvent> args)
+        {
+            if (_State != MatchState.RUNNING)
+            {
                 return;
             }
 
             ExpEvent ev = args.Payload;
 
             TrackedPlayer? runner = _GetRunnerFromID(ev.SourceID);
-            if (runner == null) {
+            if (runner == null)
+            {
                 runner = _GetRunnerFromID(ev.TargetID);
             }
 
-            if (runner == null) {
+            if (runner == null)
+            {
                 return;
             }
 
@@ -554,12 +675,14 @@ namespace watchtower.Services {
             string direction = "SOURCE";
             Character? c = _GetCharacterFromID(ev.SourceID);
 
-            if (c == null) {
+            if (c == null)
+            {
                 direction = "TARGET";
                 c = _GetCharacterFromID(ev.TargetID);
             }
 
-            if (c == null) {
+            if (c == null)
+            {
                 direction = "UNKNOWN";
             }
 
@@ -567,10 +690,14 @@ namespace watchtower.Services {
             _MatchMessages.Log($"Team {runner.Index}:{runner.RunnerName} @{c?.Name} {direction} {entry?.Description ?? $"missing {ev.ExpID}"}");
         }
 
-        private TrackedPlayer? _GetRunnerFromID(string charID) {
-            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players) {
-                foreach (Character c in entry.Value.Characters) {
-                    if (c.ID == charID) {
+        private TrackedPlayer? _GetRunnerFromID(string charID)
+        {
+            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players)
+            {
+                foreach (Character c in entry.Value.Characters)
+                {
+                    if (c.ID == charID)
+                    {
                         return entry.Value;
                     }
                 }
@@ -579,10 +706,14 @@ namespace watchtower.Services {
             return null;
         }
 
-        private Character? _GetCharacterFromID(string charID) {
-            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players) {
-                foreach (Character c in entry.Value.Characters) {
-                    if (c.ID == charID) {
+        private Character? _GetCharacterFromID(string charID)
+        {
+            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players)
+            {
+                foreach (Character c in entry.Value.Characters)
+                {
+                    if (c.ID == charID)
+                    {
                         return c;
                     }
                 }
