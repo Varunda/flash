@@ -98,12 +98,15 @@ namespace watchtower.Services.Implementations {
                 return;
             }
 
-            _ChallengeEvents.EmitChallengeEnded(running);
             _RunningChallenges = _RunningChallenges.Where(iter => iter.Index != index).ToList();
-            _Logger.LogInformation($"Ended running challenge {running.Challenge.ID}/{running.Challenge.Name}, index {index}");
-            _MatchLog.Log($"Challenge {running.Challenge.Name} ended");
 
+            string s = $"Ended running challenge {running.Challenge.ID}/{running.Challenge.Name}";
+            _Logger.LogInformation(s);
+            _MatchLog.Log(s);
+            _ = _ThreadManager.SendThreadMessage(s);
             _ = _ThreadManager.PlayEndNoise();
+
+            _ChallengeEvents.EmitChallengeEnded(running);
         }
 
         public void SetMode(ChallengeMode mode) {

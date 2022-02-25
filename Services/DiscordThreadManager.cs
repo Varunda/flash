@@ -204,21 +204,24 @@ namespace watchtower.Services {
         /// <returns>If playing the file was successful</returns>
         public async Task<bool> Playfile(string file) {
             if (File.Exists(file) == false) {
-                _Logger.LogWarning($"Failed to play file, does not exist");
+                _Logger.LogWarning($"failed to play file: file '{file}' does not exist");
                 return false;
             }
 
             if (_VoiceChannel == null) {
+                _Logger.LogWarning($"failed to play file: voice channel is null");
                 return false;
             }
 
             VoiceNextExtension? voice = _DiscordWrapper.GetClient().GetVoiceNext();
             if (voice == null) {
+                _Logger.LogWarning($"failed to play file: VoiceNext is null");
                 return false;
             }
 
             VoiceNextConnection? conn = voice.GetConnection(_Guild);
             if (conn == null) {
+                _Logger.LogWarning($"failed to play file: connection is null");
                 return false;
             }
 
@@ -244,7 +247,7 @@ namespace watchtower.Services {
                 await voiceOutput.FlushAsync();
                 await conn.WaitForPlaybackFinishAsync();
             } catch (Exception ex) {
-                _Logger.LogError(ex, $"failed to play file");
+                _Logger.LogError(ex, $"failed to play file '{file}'");
                 return false;
             } finally {
                 await conn.SendSpeakingAsync(false);
