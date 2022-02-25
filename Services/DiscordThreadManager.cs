@@ -124,6 +124,9 @@ namespace watchtower.Services {
                 }
 
                 _VoiceConnection = await voice.ConnectAsync(_VoiceChannel);
+                if (_VoiceConnection == null) {
+                    _Logger.LogError($"failed to connect to voice");
+                }
             } catch (Exception ex) {
                 _Logger.LogError(ex, $"failed to connect to voice");
                 _AdminMessages.Log($"error connecting to voice: {ex.Message}");
@@ -209,17 +212,6 @@ namespace watchtower.Services {
         public async Task<bool> Playfile(string file) {
             if (File.Exists(file) == false) {
                 _Logger.LogWarning($"failed to play file: file '{file}' does not exist");
-                return false;
-            }
-
-            if (_VoiceChannel == null) {
-                _Logger.LogWarning($"failed to play file: voice channel is null");
-                return false;
-            }
-
-            VoiceNextExtension? voice = _DiscordWrapper.GetClient().GetVoiceNext();
-            if (voice == null) {
-                _Logger.LogWarning($"failed to play file: VoiceNext is null");
                 return false;
             }
 
