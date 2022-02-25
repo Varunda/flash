@@ -44,36 +44,36 @@ namespace watchtower.Services {
         /// </summary>
         /// <returns>If the thread was successfully created</returns>
         public async Task<bool> CreateMatchThread() {
-            if (_MatchThread != null) {
-                await _MatchThread.LeaveThreadAsync();
-                _MatchThread = null;
-            }
-
-            _Guild = await _DiscordWrapper.GetClient().GetGuildAsync(_DiscordOptions.Value.GuildId);
-            if (_Guild == null) {
-                _AdminMessages.Log($"Unable to find Discord guild {_DiscordOptions.Value.GuildId}");
-                return false;
-            }
-
-            DiscordChannel? parentChannel = await _DiscordWrapper.GetClient().GetChannelAsync(_DiscordOptions.Value.ParentChannelId);
-            if (parentChannel == null) {
-                _AdminMessages.Log($"Unable to find parent channel {_DiscordOptions.Value.ParentChannelId}");
-                return false;
-            }
-
-            _VoiceChannel = await _DiscordWrapper.GetClient().GetChannelAsync(_DiscordOptions.Value.VoiceChannelId);
-            if (_VoiceChannel == null) {
-                _AdminMessages.Log($"Unable to find voice channel {_DiscordOptions.Value.VoiceChannelId}");
-                return false;
-            }
-
-            DiscordMessage createMessage = await parentChannel.SendMessageAsync("Creating new thread for new speedrunners match");
-
             try {
+                if (_MatchThread != null) {
+                    await _MatchThread.LeaveThreadAsync();
+                    _MatchThread = null;
+                }
+
+                _Guild = await _DiscordWrapper.GetClient().GetGuildAsync(_DiscordOptions.Value.GuildId);
+                if (_Guild == null) {
+                    _AdminMessages.Log($"Unable to find Discord guild {_DiscordOptions.Value.GuildId}");
+                    return false;
+                }
+
+                DiscordChannel? parentChannel = await _DiscordWrapper.GetClient().GetChannelAsync(_DiscordOptions.Value.ParentChannelId);
+                if (parentChannel == null) {
+                    _AdminMessages.Log($"Unable to find parent channel {_DiscordOptions.Value.ParentChannelId}");
+                    return false;
+                }
+
+                _VoiceChannel = await _DiscordWrapper.GetClient().GetChannelAsync(_DiscordOptions.Value.VoiceChannelId);
+                if (_VoiceChannel == null) {
+                    _AdminMessages.Log($"Unable to find voice channel {_DiscordOptions.Value.VoiceChannelId}");
+                    return false;
+                }
+
+                DiscordMessage createMessage = await parentChannel.SendMessageAsync("Creating new thread for new speedrunners match");
+
                 _MatchThread = await createMessage.CreateThreadAsync($"Speedrunners match - {DateTime.UtcNow:u}", DSharpPlus.AutoArchiveDuration.Day);
                 await _MatchThread.JoinThreadAsync();
             } catch (Exception ex) {
-                _Logger.LogError(ex, $"error creating new thread");
+                _Logger.LogError(ex, $"error creating match thread");
                 _AdminMessages.Log($"error creating new thread: {ex.Message}");
                 return false;
             }
@@ -92,7 +92,12 @@ namespace watchtower.Services {
                 return false;
             }
 
-            await _MatchThread.SendMessageAsync(msg);
+            try {
+                await _MatchThread.SendMessageAsync(msg);
+            } catch (Exception ex) {
+                _Logger.LogError(ex, $"error sending message to match thread");
+                _AdminMessages.Log($"error creating message to match thread: {ex.Message}");
+            }
 
             return true;
         }
@@ -103,18 +108,23 @@ namespace watchtower.Services {
                 return false;
             }
 
-            VoiceNextExtension? voice = _DiscordWrapper.GetClient().GetVoiceNext();
-            if (voice == null) {
-                _Logger.LogWarning($"Cannot get VoiceNext");
-                return false;
-            }
+            try {
+                VoiceNextExtension? voice = _DiscordWrapper.GetClient().GetVoiceNext();
+                if (voice == null) {
+                    _Logger.LogWarning($"Cannot get VoiceNext");
+                    return false;
+                }
 
-            VoiceNextConnection? conn = voice.GetConnection(_Guild);
-            if (conn != null) {
-                conn.Disconnect();
-            }
+                VoiceNextConnection? conn = voice.GetConnection(_Guild);
+                if (conn != null) {
+                    conn.Disconnect();
+                }
 
-            await voice.ConnectAsync(_VoiceChannel);
+                await voice.ConnectAsync(_VoiceChannel);
+            } catch (Exception ex) {
+                _Logger.LogError(ex, $"failed to connect to voice");
+                _AdminMessages.Log($"error connecting to voice: {ex.Message}");
+            }
 
             return true;
         }
@@ -124,14 +134,20 @@ namespace watchtower.Services {
                 return true;
             }
 
-            VoiceNextExtension? voice = _DiscordWrapper.GetClient().GetVoiceNext();
-            if (voice == null) {
-                return true;
-            }
+            try {
+                VoiceNextExtension? voice = _DiscordWrapper.GetClient().GetVoiceNext();
+                if (voice == null) {
+                    return true;
+                }
 
-            VoiceNextConnection? conn = voice.GetConnection(_Guild);
-            if (conn != null) {
-                conn.Disconnect();
+                VoiceNextConnection? conn = voice.GetConnection(_Guild);
+                if (conn != null) {
+                    conn.Disconnect();
+                }
+            } catch (Exception ex) {
+                _Logger.LogError(ex, "failed to disconnect from voice");
+                _AdminMessages.Log($"error disconnecting to voice: {ex.Message}");
+                return false;
             }
 
             return true;
@@ -147,12 +163,18 @@ namespace watchtower.Services {
                 return false;
             }
 
-            await _MatchThread.SendMessageAsync($"Thread archived {(reason != null ? $"\nreason: {reason}" : "")}");
+            await SendThreadMessage($"Thread archived {(reason != null ? $"\nreason: {reason}" : "")}");
 
-            await _MatchThread.ModifyAsync(action => {
-                action.IsArchived = true;
-                action.Locked = false;
-            });
+            try {
+                await _MatchThread.ModifyAsync(action => {
+                    action.IsArchived = true;
+                    action.Locked = false;
+                });
+            } catch (Exception ex) {
+                _Logger.LogError(ex, $"error archiving match thread");
+                _AdminMessages.Log($"failed to close match thread: {ex.Message}");
+                return false;
+            }
 
             return true;
         }
