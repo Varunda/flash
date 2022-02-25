@@ -46,11 +46,6 @@ namespace watchtower.Services {
         /// <returns>If the thread was successfully created</returns>
         public async Task<bool> CreateMatchThread() {
             try {
-                if (_MatchThread != null) {
-                    await _MatchThread.LeaveThreadAsync();
-                    _MatchThread = null;
-                }
-
                 _Guild = await _DiscordWrapper.GetClient().GetGuildAsync(_DiscordOptions.Value.GuildId);
                 if (_Guild == null) {
                     _AdminMessages.Log($"Unable to find Discord guild {_DiscordOptions.Value.GuildId}");

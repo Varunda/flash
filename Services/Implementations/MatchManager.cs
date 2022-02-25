@@ -282,6 +282,7 @@ namespace watchtower.Services {
             if (await _ThreadManager.ConnectToVoice() == false) {
                 _Logger.LogWarning($"Failed to connect to voice");
             }
+            _Logger.LogInformation($"Successfully started match");
         }
 
         public async Task EndMatch() {
