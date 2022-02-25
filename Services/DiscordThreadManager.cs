@@ -127,6 +127,7 @@ namespace watchtower.Services {
                 if (_VoiceConnection == null) {
                     _Logger.LogError($"failed to connect to voice");
                 }
+                _Logger.LogInformation($"voice connection made");
             } catch (Exception ex) {
                 _Logger.LogError(ex, $"failed to connect to voice");
                 _AdminMessages.Log($"error connecting to voice: {ex.Message}");
