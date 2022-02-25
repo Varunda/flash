@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using watchtower.Code.Constants;
 using watchtower.Constants;
 using watchtower.Models;
 
@@ -10,34 +11,49 @@ namespace watchtower.Services {
     public interface IMatchManager {
 
         /// <summary>
-        /// Start a match. If the match is already running, nothing happens
+        /// Start a match, which will create the thread that speedrunners can join to view the active challenges
         /// </summary>
-        void StartRound();
+        Task StartMatch();
 
         /// <summary>
-        /// Restart an existing match. If a match is not running, nothing happens
+        /// End a match, cleaning up the threads made and leave the voice channel
         /// </summary>
-        void RestartRound();
+        Task EndMatch();
+
+        /// <summary>
+        /// Start a round. If the match is already running, nothing happens
+        /// </summary>
+        Task StartRound();
+
+        /// <summary>
+        /// Restart an existing round. If a match is not running, nothing happens
+        /// </summary>
+        Task RestartRound();
 
         /// <summary>
         /// Clear the match, resetting everything for another match
         /// </summary>
-        void ClearMatch();
+        Task ClearMatch();
 
         /// <summary>
-        /// Pause a currently running match
+        /// Pause a currently running round
         /// </summary>
-        void PauseRound();
+        Task PauseRound();
 
         /// <summary>
-        /// Stop the current match. Does nothing if a match isn't running
+        /// Stop the current round. Does nothing if a round isn't running
         /// </summary>
-        void StopRound(int? winnerIndex = null);
+        Task StopRound(int? winnerIndex = null);
+
+        /// <summary>
+        /// Get the current state of the round
+        /// </summary>
+        RoundState GetRoundState();
 
         /// <summary>
         /// Get the current state of the match
         /// </summary>
-        MatchState GetState();
+        MatchState GetMatchState();
 
         /// <summary>
         /// Set the settings used in a match

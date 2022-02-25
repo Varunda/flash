@@ -1,22 +1,101 @@
-﻿@using watchtower.Services
-
-@inject IMatchManager _Match
+﻿@using watchtower.Code.Constants
+@using watchtower.Services
+@using watchtower.Models.Events
 
 <div>
     <h4>Match controls</h4>
 
-    <button type="button" class="btn btn-primary d-block" @onclick="() => _Match.StartRound()">Start round</button>
-    <p>Start the round and timer</p>
+    <table class="table align-middle">
+        <tr>
+            <td>
+                <button type="button" class="btn btn-primary" disabled="@(_MatchState != MatchState.UNSTARTED)" @onclick="() => _Match.StartMatch()">Start match</button>
+            </td>
 
-    <button type="button" class="btn btn-primary d-block" @onclick="() => _Match.RestartRound()">Setup new round</button>
-    <p>Setup a new round, resetting the timer, kills, etc. Press start round to actually start it</p>
+            <td>Start the match, setting up the Discord stuff</td>
+        </tr>
 
-    <button type="button" class="btn btn-danger d-block" @onclick="() => _Match.ClearMatch()">Reset match</button>
-    <p>Reset the match, clearing everything</p>
+        <tr>
+            <td>
+                <button type="button" class="btn btn-danger" disabled="@(_MatchState != MatchState.STARTED)" @onclick="() => _Match.EndMatch()">End match</button>
+            </td>
 
-    <button type="button" class="btn btn-warning d-block" @onclick="() => _Match.RestartRound()">Restart round</button>
-    <p>Restart the round, resetting the scores</p>
+            <td>End the match, disconnecting the Discord bot</td>
+        </tr>
 
-    <button type="button" class="btn btn-success d-block" @onclick="() => _Match.PauseRound()">Pause round</button>
-    <p>Pause the round, not counting kills for a bit</p>
+        <tr>
+            <td>
+                <button type="button" class="btn btn-warning" @onclick="() => _Match.ClearMatch()">Reset match</button>
+            </td>
+
+            <td>Reset the match, clearing everything</td>
+        </tr>
+    </table>
+
+    <hr />
+
+    <h4>Round controls</h4>
+
+    <table class="table">
+        @if (_MatchState != MatchState.STARTED) {
+            <tr class="table-danger">
+                <td colspan="2">Match is not started, cannot control rounds</td>
+            </tr>
+        }
+
+        <tr>
+            <td>
+                <button type="button" class="btn btn-success" disabled="@(_MatchState != MatchState.STARTED)" @onclick="() => _Match.StartRound()">Start round</button>
+            </td>
+
+            <td>Start the round and timer</td>
+        </tr>
+
+        <tr>
+            <td>
+                <button type="button" class="btn btn-primary" disabled="@(_MatchState != MatchState.STARTED)" @onclick="() => _Match.RestartRound()">New round</button>
+            </td>
+
+            <td>Setup the new round, reseting the timer, kills, etc. Press start round to actually start it</td>
+        </tr>
+
+        <tr>
+            <td>
+                <button type="button" class="btn btn-warning" disabled="@(_MatchState != MatchState.STARTED)" @onclick="() => _Match.RestartRound()">Restart round</button>
+            </td>
+
+            <td>Restart the round, resetting the score</td>
+        </tr>
+
+        <tr>
+            <td>
+                <button type="button" class="btn btn-success" disabled="@(_MatchState != MatchState.STARTED)" @onclick="() => _Match.PauseRound()">Pause round</button>
+            </td>
+
+            <td>Pause the round</td>
+        </tr>
+    </table>
 </div>
+
+@inject IMatchManager _Match  
+@inject IMatchEventBroadcastService _MatchEvents
+
+@code {
+
+    private MatchState _MatchState;
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+
+        _MatchState = _Match.GetMatchState();
+
+        _MatchEvents.OnMatchStateEvent += OnMatchStateEvent;
+    }
+
+    private void OnMatchStateEvent(object? sender, Ps2EventArgs<MatchState> args) {
+        _MatchState = args.Payload;
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+}

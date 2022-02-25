@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using watchtower.Code;
 using watchtower.Code.Challenge;
 using watchtower.Models;
 using watchtower.Models.Events;
+using watchtower.Services.Queue;
 
 namespace watchtower.Services.Implementations {
 
@@ -18,6 +20,9 @@ namespace watchtower.Services.Implementations {
 
         private readonly IChallengeEventBroadcastService _ChallengeEvents;
         private readonly ITwitchChatBroadcastService _TwitchChat;
+        private readonly IMatchMessageBroadcastService _MatchLog;
+        private readonly IAdminMessageBroadcastService _AdminLog;
+        private readonly DiscordThreadManager _ThreadManager;
 
         private ChallengeMode _Mode = ChallengeMode.NICE;
 
@@ -36,21 +41,26 @@ namespace watchtower.Services.Implementations {
         private ChallengePollResults? _PollResults;
 
         public ChallengeManager(ILogger<ChallengeManager> logger,
-                IChallengeEventBroadcastService challengeEvents, ITwitchChatBroadcastService twitchChat) { 
+                IChallengeEventBroadcastService challengeEvents, ITwitchChatBroadcastService twitchChat,
+                IMatchMessageBroadcastService matchLog, DiscordThreadManager threadManager,
+                IAdminMessageBroadcastService adminLog) {
 
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             _ChallengeEvents = challengeEvents ?? throw new ArgumentNullException(nameof(challengeEvents));
             _TwitchChat = twitchChat ?? throw new ArgumentNullException(nameof(twitchChat));
+            _MatchLog = matchLog;
 
             LoadChallenges();
-            _Logger.LogInformation($"Loaded challenges:\n{String.Join("\n", _AllChallenges.Select(iter => $"\t{iter.ID}/{iter.Name}: {iter.Description}"))}");
+            _Logger.LogInformation($"Loaded challenges:\n{string.Join("\n", _AllChallenges.Select(iter => $"\t{iter.ID}/{iter.Name}: {iter.Description}"))}");
 
             _TwitchChat.OnChatMessage += OnTwitchChat;
 
             _PollTimer.Interval = 1000;
             _PollTimer.AutoReset = true;
             _PollTimer.Elapsed += OnTimerTick;
+            _ThreadManager = threadManager;
+            _AdminLog = adminLog;
         }
 
         public void Start(int ID) {
@@ -68,8 +78,17 @@ namespace watchtower.Services.Implementations {
 
             IndexedChallenge newChall = new IndexedChallenge(chall);
             _RunningChallenges.Add(newChall);
-            _Logger.LogInformation($"Started new challenge {newChall.Challenge.ID}/{newChall.Challenge.Name}, index {newChall.Index}");
+
+            _MatchLog.Log($"Started new challenge {newChall.Challenge.ID}/{newChall.Challenge.Name}, index {newChall.Index}");
+            try {
+                _ = _ThreadManager.SendThreadMessage($"New challenge started!\n{newChall.Challenge.Name}: {newChall.Challenge.Description}");
+            } catch (Exception ex) {
+                _Logger.LogError(ex, $"failed to send message about challenge starting");
+            }
+
             _ChallengeEvents.EmitChallengeStart(newChall);
+
+            _ = _ThreadManager.PlayStartNoise();
         }
 
         public void End(int index) {
@@ -82,11 +101,17 @@ namespace watchtower.Services.Implementations {
             _ChallengeEvents.EmitChallengeEnded(running);
             _RunningChallenges = _RunningChallenges.Where(iter => iter.Index != index).ToList();
             _Logger.LogInformation($"Ended running challenge {running.Challenge.ID}/{running.Challenge.Name}, index {index}");
+            _MatchLog.Log($"Challenge {running.Challenge.Name} ended");
+
+            _ = _ThreadManager.PlayEndNoise();
         }
 
         public void SetMode(ChallengeMode mode) {
             _Mode = mode;
+
             _Logger.LogInformation($"Challenge mode set to {mode}");
+            _AdminLog.Log($"Challenge mode set to {mode}");
+
             _ChallengeEvents.EmitModeChange(mode);
         }
 
@@ -226,7 +251,7 @@ namespace watchtower.Services.Implementations {
 
             if (_PollOptions != null) {
                 _PollTimerLeft = _PollOptions.VoteTime - ((int)Math.Round(_PollTotalTicks / TICKS_PER_SECOND));
-                _Logger.LogTrace($"Time left on current poll: {_PollTimerLeft}");
+                //_Logger.LogTrace($"Time left on current poll: {_PollTimerLeft}");
             }
 
             _ChallengeEvents.EmitPollTimerUpdate(_PollTimerLeft);
@@ -281,7 +306,7 @@ namespace watchtower.Services.Implementations {
 
             TwitchChatMessage msg = args.Payload;
 
-            if (Int32.TryParse(msg.Message, out int voteOption) == true) {
+            if (int.TryParse(msg.Message, out int voteOption) == true) {
                 foreach (KeyValuePair<int, ChallengePollResult> entry in _PollResults.Options) {
                     if (entry.Value.Users.Contains(msg.Username)) {
                         entry.Value.Users.Remove(msg.Username);

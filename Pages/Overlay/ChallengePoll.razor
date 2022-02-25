@@ -45,8 +45,8 @@
             <div class="list-group">
                 @foreach (KeyValuePair<int, ChallengePollResult> entry in _Results.Options) {
                     <div class="list-group-item px-0 sr-border-bottom mb-0
-                         @(_Results.WinnerChallengeID == null ? "sr-color sr-background"
-                           : _Results.WinnerChallengeID == entry.Value.ChallengeID ? "sr-color-secondary sr-background-primary" : "sr-color-muted sr-background") ">
+                         @(_Results.WinnerChallengeID == null ? "sr-color sr-background-muted"
+                           : _Results.WinnerChallengeID == entry.Value.ChallengeID ? "sr-color-secondary sr-background-muted-light" : "sr-color-muted sr-background-muted") ">
 
                         <div class="row sr-h3">
                             <div class="col-6">
@@ -106,7 +106,7 @@
     }
 
     private string GetCssClass() {
-        return $"px-2 py-1 sr-border sr-background sr-color {(_IsChanging == false ? "slide-in" : "slide-out")}";
+        return $"px-2 py-1 sr-border sr-color sr-background-muted {(_IsChanging == false ? "slide-in" : "slide-out")}";
     }
 
     public void Dispose() {

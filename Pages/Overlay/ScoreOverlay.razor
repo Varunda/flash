@@ -237,7 +237,7 @@
     protected override void OnInitialized() {
         base.OnInitialized();
 
-        _MatchEvents.OnPlayerUpdateEvent += OnPlayerUpdate;
+        _MatchEvents.OnPlayerUpdateEvent += PlayerUpdateHandler;
         _MatchEvents.OnTimerEvent += OnTimerUpdate;
         _MatchEvents.OnMatchSettingsEvent += OnSettingsUpdate;
 
@@ -253,7 +253,7 @@
     }
 
     public void Dispose() {
-        _MatchEvents.OnPlayerUpdateEvent -= OnPlayerUpdate;
+        _MatchEvents.OnPlayerUpdateEvent -= PlayerUpdateHandler;
         _MatchEvents.OnTimerEvent -= OnTimerUpdate;
         _MatchEvents.OnMatchSettingsEvent -= OnSettingsUpdate;
 
@@ -261,7 +261,7 @@
         _ChallengeEvents.OnPollEnded -= OnPollEnded;
     }
 
-    private void OnPlayerUpdate(object? sender, Ps2EventArgs<TrackedPlayer?> args) {
+    private void PlayerUpdateHandler(object? sender, Ps2EventArgs<TrackedPlayer?> args) {
         TrackedPlayer? player = args.Payload;
 
         if (player != null) {

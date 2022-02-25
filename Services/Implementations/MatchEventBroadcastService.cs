@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using watchtower.Code.Constants;
 using watchtower.Constants;
 using watchtower.Models;
 using watchtower.Models.Events;
@@ -18,6 +19,11 @@ namespace watchtower.Services.Implementations {
         public event EventHandler<Ps2EventArgs<int>>? OnTimerEvent;
         public void EmitTimerEvent(int time) {
             OnTimerEvent?.Invoke(this, new Ps2EventArgs<int>(time));
+        }
+
+        public event EventHandler<Ps2EventArgs<RoundState>>? OnRoundStateEvent;
+        public void EmitRoundStateEvent(RoundState state) {
+            OnRoundStateEvent?.Invoke(this, new Ps2EventArgs<RoundState>(state));
         }
 
         public event EventHandler<Ps2EventArgs<MatchState>>? OnMatchStateEvent;

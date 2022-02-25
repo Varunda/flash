@@ -4,6 +4,7 @@
 @using watchtower.Constants
 @using watchtower.Pages.Components
 @using watchtower.Pages.Setup
+@using watchtower.Code.Constants
 
 @inject IMatchManager _Match
 @inject IMatchEventBroadcastService _MatchEvents
@@ -12,10 +13,18 @@
     <h4>Match overview:</h4>
 
     <table class="table table-sm">
+
         <tr>
-            <td><b>State:</b></td>
+            <td><b>Match state:</b></td>
             <td>
                 @_MatchState
+            </td>
+        </tr>
+
+        <tr>
+            <td><b>Round state:</b></td>
+            <td>
+                @_RoundState
             </td>
         </tr>
 
@@ -52,6 +61,7 @@
     private TrackedPlayer? _player2 = null;
 
     private MatchState _MatchState = MatchState.UNSTARTED;
+    private RoundState _RoundState = RoundState.UNSTARTED;
     private int _MatchLength = 0;
 
     protected override void OnInitialized() {
@@ -60,16 +70,17 @@
         _player1 = _Match.GetPlayer(0);
         _player2 = _Match.GetPlayer(1);
 
-        _MatchState = _Match.GetState();
+        _RoundState = _Match.GetRoundState();
+        _MatchState = _Match.GetMatchState();
         _MatchLength = _Match.GetMatchLength();
 
-        _MatchEvents.OnMatchStateEvent += OnMatchStateEvent;
+        _MatchEvents.OnRoundStateEvent += OnRoundStateEvent;
         _MatchEvents.OnPlayerUpdateEvent += OnPlayerUpdate;
         _MatchEvents.OnTimerEvent += OnTimerTick;
     }
 
-    private void OnMatchStateEvent(object? sender, Ps2EventArgs<MatchState> args) {
-        _MatchState = args.Payload;
+    private void OnRoundStateEvent(object? sender, Ps2EventArgs<RoundState> args) {
+        _RoundState = args.Payload;
         InvokeAsync(() => {
             StateHasChanged();
         });
