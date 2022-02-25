@@ -25,6 +25,7 @@ namespace watchtower.Services {
         private DiscordThreadChannel? _MatchThread = null;
         private DiscordChannel? _VoiceChannel = null;
         private DiscordGuild? _Guild = null;
+        private VoiceNextConnection? _VoiceConnection = null;
 
         public DiscordThreadManager(ILogger<DiscordThreadManager> logger,
             DiscordMessageQueue discordMessageQueue, DiscordWrapper discordWrapper,
@@ -122,10 +123,11 @@ namespace watchtower.Services {
                     conn.Disconnect();
                 }
 
-                await voice.ConnectAsync(_VoiceChannel);
+                _VoiceConnection = await voice.ConnectAsync(_VoiceChannel);
             } catch (Exception ex) {
                 _Logger.LogError(ex, $"failed to connect to voice");
                 _AdminMessages.Log($"error connecting to voice: {ex.Message}");
+                return false;
             }
 
             return true;
@@ -221,18 +223,17 @@ namespace watchtower.Services {
                 return false;
             }
 
-            VoiceNextConnection? conn = voice.GetConnection(_Guild);
-            if (conn == null) {
+            if (_VoiceConnection == null) {
                 _Logger.LogWarning($"failed to play file: connection is null");
                 return false;
             }
 
-            if (conn.IsPlaying == true) {
-                await conn.WaitForPlaybackFinishAsync();
+            if (_VoiceConnection.IsPlaying == true) {
+                await _VoiceConnection.WaitForPlaybackFinishAsync();
             }
 
             try {
-                await conn.SendSpeakingAsync(true);
+                await _VoiceConnection.SendSpeakingAsync(true);
 
                 ProcessStartInfo ffmpeg = new ProcessStartInfo() {
                     FileName = "ffmpeg",
@@ -244,15 +245,15 @@ namespace watchtower.Services {
                 Process process = Process.Start(ffmpeg);
                 Stream outputStream = process.StandardOutput.BaseStream;
 
-                VoiceTransmitSink voiceOutput = conn.GetTransmitSink();
+                VoiceTransmitSink voiceOutput = _VoiceConnection.GetTransmitSink();
                 await outputStream.CopyToAsync(voiceOutput);
                 await voiceOutput.FlushAsync();
-                await conn.WaitForPlaybackFinishAsync();
+                await _VoiceConnection.WaitForPlaybackFinishAsync();
             } catch (Exception ex) {
                 _Logger.LogError(ex, $"failed to play file '{file}'");
                 return false;
             } finally {
-                await conn.SendSpeakingAsync(false);
+                await _VoiceConnection.SendSpeakingAsync(false);
             }
 
             return true;

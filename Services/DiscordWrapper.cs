@@ -50,6 +50,8 @@ namespace watchtower.Services {
             await _Discord.ConnectAsync();
             _Voice =  _Discord.UseVoiceNext();
 
+            _Logger.LogInformation($"Bot started and voice setup");
+
             return true;
         }
 
