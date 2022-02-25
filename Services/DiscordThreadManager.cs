@@ -72,6 +72,8 @@ namespace watchtower.Services {
 
                 _MatchThread = await createMessage.CreateThreadAsync($"Speedrunners match - {DateTime.UtcNow:u}", DSharpPlus.AutoArchiveDuration.Day);
                 await _MatchThread.JoinThreadAsync();
+
+                _AdminMessages.Log($"Discord bot started, connected to voice and thread created");
             } catch (Exception ex) {
                 _Logger.LogError(ex, $"error creating match thread");
                 _AdminMessages.Log($"error creating new thread: {ex.Message}");
