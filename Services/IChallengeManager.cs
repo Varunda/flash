@@ -81,5 +81,9 @@ namespace watchtower.Services {
         /// <param name="ID"></param>
         void RemoveActive(int ID);
 
+        void SetGlobalOptions(GlobalChallengeOptions options);
+
+        GlobalChallengeOptions GetGlobalOptions();
+
     }
 }

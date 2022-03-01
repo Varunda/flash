@@ -6,7 +6,7 @@
 @using watchtower.Pages.Setup
 @using watchtower.Code.Constants
 
-@inject IMatchManager _Match
+@inject MatchManager _Match
 @inject IMatchEventBroadcastService _MatchEvents
 
 <div>
@@ -81,6 +81,13 @@
 
     private void OnRoundStateEvent(object? sender, Ps2EventArgs<RoundState> args) {
         _RoundState = args.Payload;
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void OnMatchStateEvent(object? sender, Ps2EventArgs<MatchState> args) {
+        _MatchState = args.Payload;
         InvokeAsync(() => {
             StateHasChanged();
         });

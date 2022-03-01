@@ -58,7 +58,7 @@ namespace watchtower {
             services.AddSingleton<ICommandBus, CommandBus>();
 
             services.AddSingleton<ISecondTimer, SecondTimer>();
-            services.AddSingleton<IMatchManager, MatchManager>();
+            services.AddSingleton<MatchManager>();
             services.AddSingleton<IChallengeManager, ChallengeManager>();
             services.AddSingleton<IRealtimeEventBroadcastService, RealtimeEventBroadcastService>();
             services.AddSingleton<ITwitchChatBroadcastService, TwitchChatBroadcastService>();

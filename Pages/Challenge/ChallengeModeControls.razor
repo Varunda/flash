@@ -1,4 +1,5 @@
 ﻿@using watchtower.Code
+@using watchtower.Code.Challenge
 @using watchtower.Models.Events
 
 @inject IChallengeEventBroadcastService _ChallengeEvents
@@ -7,48 +8,133 @@
 @implements IDisposable
 
 <div>
-    <h2>Mode</h2>
+    <h1>Settings</h1>
 
     <hr />
 
-    <b>
-        Current mode:
-    </b>
-    <span>
-        @_Mode
-    </span>
+    <div>
+        <h2>Mode:</h2>
 
-    <hr />
+        <b>Current mode:</b>
+        <span>@_Mode</span>
 
-    <button type="button" class="btn btn-success w-100 mb-1" @onclick="() => _ChallengeManager.SetMode(ChallengeMode.NICE)">
-        Nice mode
-    </button>
+        <hr />
 
-    <p>
-        <b>Nice mode:</b>
-        In nice mode, challenges act as a score multiplier, giving more points if the conditions is met. Runners are free to ignore the challenge
-    </p>
+        <div>
+            <button type="button" class="btn btn-success w-100 mb-1" @onclick="() => _ChallengeManager.SetMode(ChallengeMode.NICE)">
+                Nice mode
+            </button>
 
-    <button type="button" class="btn btn-danger w-100 mb-1" @onclick="() => _ChallengeManager.SetMode(ChallengeMode.MEAN)">
-        Mean mode
-    </button>
+            <p>
+                <b>Nice mode:</b>
+                In nice mode, challenges act as a score multiplier, giving more points if the conditions is met. Runners are free to ignore the challenge
+            </p>
+        </div>
 
-    <p>
-        <b>Mean mode:</b>
-        In mean mode, points are only given if a challenge is met. Runners must follow the challenge to score points
-    </p>
+        <div>
+            <button type="button" class="btn btn-danger w-100 mb-1" @onclick="() => _ChallengeManager.SetMode(ChallengeMode.MEAN)">
+                Mean mode
+            </button>
+
+            <p>
+                <b>Mean mode:</b>
+                In mean mode, points are only given if a challenge is met. Runners must follow the challenge to score points
+            </p>
+        </div>
+    </div>
+
+    <hr class="border-dark" />
+
+    <div>
+        <h2>Duration type</h2>
+
+        <b>Current duration type:</b>
+        <span>@_Options.Type</span>
+
+        <hr />
+
+        <div>
+            <button type="button" class="w-100 btn btn-primary" @onclick="() => setDurationType(ChallengeDurationType.KILLS)">
+                Kills
+            </button>
+
+            <p>
+                <b>Kills:</b>
+                When the duration is set to kills, the challenge will last a number of kills (between both runners)
+            </p>
+        </div>
+
+        <div>
+            <button type="button" class="w-100 btn btn-success" @onclick="() => setDurationType(ChallengeDurationType.TIMED)">
+                Timed
+            </button>
+
+            <p>
+                <b>Timed:</b>
+                When the duration is set to timed, the challenge will last for this many seconds
+            </p>
+
+        </div>
+    </div>
+
+    <div>
+        <h2>Duration</h2>
+
+        <b>Current duration:</b>
+        <span>@_Options.Duration</span>
+
+        @if (_Options.Type == ChallengeDurationType.KILLS) {
+            <span>(kills)</span>
+        } else if (_Options.Type == ChallengeDurationType.TIMED) {
+            <span>(seconds)</span>
+        } else {
+            <span>Unchecked type</span>
+        }
+
+        <EditForm Model="_Options">
+            <div class="input-group mt-3">
+                <InputNumber @bind-Value="_Options.Duration" class="form-control"></InputNumber>
+
+                <div class="input-group-append">
+                    <button class="btn btn-primary" @onclick="() => setDuration(_Options.Duration)">
+                        Update
+                    </button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
 </div>
 
 @code {
 
     private ChallengeMode _Mode;
+    private GlobalChallengeOptions _Options = default!;
 
     protected override void OnInitialized() {
         base.OnInitialized();
 
         _Mode = _ChallengeManager.GetMode();
+        _Options = _ChallengeManager.GetGlobalOptions();
 
         _ChallengeEvents.OnModeChange += onModeChange;
+        _ChallengeEvents.OnGlobalOptionsUpdate += onGlobalOptionsChange;
+    }
+
+    private void onGlobalOptionsChange(object? sender, Ps2EventArgs<GlobalChallengeOptions> args) {
+        _Options = args.Payload;
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
+    }
+
+    private void setDurationType(ChallengeDurationType type) {
+        _Options.Type = type;
+        _ChallengeManager.SetGlobalOptions(_Options);
+    }
+
+    private void setDuration(int dur) {
+        _Options.Duration = dur;
+        _ChallengeManager.SetGlobalOptions(_Options);
     }
 
     private void onModeChange(object? sender, Ps2EventArgs<ChallengeMode> args) {
@@ -61,6 +147,7 @@
 
     public void Dispose() {
         _ChallengeEvents.OnModeChange -= onModeChange;
+        _ChallengeEvents.OnGlobalOptionsUpdate -= onGlobalOptionsChange;
     }
 
 }

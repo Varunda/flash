@@ -25,6 +25,7 @@ namespace watchtower.Services.Implementations {
         private readonly DiscordThreadManager _ThreadManager;
 
         private ChallengeMode _Mode = ChallengeMode.NICE;
+        private GlobalChallengeOptions _GlobalDurationOptions { get; set; } = new GlobalChallengeOptions();
 
         private List<IndexedChallenge> _RunningChallenges = new List<IndexedChallenge>();
         private List<IRunChallenge> _AllChallenges = new List<IRunChallenge>();
@@ -80,15 +81,11 @@ namespace watchtower.Services.Implementations {
             _RunningChallenges.Add(newChall);
 
             _MatchLog.Log($"Started new challenge {newChall.Challenge.ID}/{newChall.Challenge.Name}, index {newChall.Index}");
-            try {
-                _ = _ThreadManager.SendThreadMessage($"New challenge started!\n{newChall.Challenge.Name}: {newChall.Challenge.Description}");
-            } catch (Exception ex) {
-                _Logger.LogError(ex, $"failed to send message about challenge starting");
-            }
 
             _ChallengeEvents.EmitChallengeStart(newChall);
 
             _ = _ThreadManager.PlayStartNoise();
+            _ = _ThreadManager.UpdateActiveChallenge(chall);
         }
 
         public void End(int index) {
@@ -103,8 +100,8 @@ namespace watchtower.Services.Implementations {
             string s = $"Ended running challenge {running.Challenge.ID}/{running.Challenge.Name}";
             _Logger.LogInformation(s);
             _MatchLog.Log(s);
-            _ = _ThreadManager.SendThreadMessage(s);
             _ = _ThreadManager.PlayEndNoise();
+            _ = _ThreadManager.ClearActiveChallenge();
 
             _ChallengeEvents.EmitChallengeEnded(running);
         }
@@ -178,7 +175,7 @@ namespace watchtower.Services.Implementations {
             } else {
                 string msg = $"Poll results: ({_PollResults.Options.Count})\n";
                 foreach (KeyValuePair<int, ChallengePollResult> entry in _PollResults.Options) {
-                    msg += $"\t{entry.Value.Challenge.Name}> {String.Join(", ", entry.Value.Users)}\n";
+                    msg += $"\t{entry.Value.Challenge.Name}> {string.Join(", ", entry.Value.Users)}\n";
                 }
 
                 int count = 0;
@@ -241,6 +238,11 @@ namespace watchtower.Services.Implementations {
             }).ToList();
 
             _ChallengeEvents.EmitActiveListUpdate(_ActiveChallenges);
+        }
+
+        public void SetGlobalOptions(GlobalChallengeOptions options) {
+            _GlobalDurationOptions = options;
+            _ChallengeEvents.EmitGlobalOptionsUpdate(options);
         }
 
         private void OnTimerTick(object? sender, ElapsedEventArgs args) {
@@ -331,6 +333,7 @@ namespace watchtower.Services.Implementations {
         public List<IRunChallenge> GetActive() => new List<IRunChallenge>(_ActiveChallenges);
         public List<IRunChallenge> GetAll() => new List<IRunChallenge>(_AllChallenges);
         public List<IndexedChallenge> GetRunning() => new List<IndexedChallenge>(_RunningChallenges);
+        public GlobalChallengeOptions GetGlobalOptions() => _GlobalDurationOptions;
 
     }
 }

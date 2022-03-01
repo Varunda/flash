@@ -56,5 +56,11 @@ namespace watchtower.Services.Implementations {
             OnActiveListUpdate?.Invoke(this, new Ps2EventArgs<List<IRunChallenge>>(new List<IRunChallenge>(challenges)));
         }
 
+        public event EventHandler<Ps2EventArgs<GlobalChallengeOptions>>? OnGlobalOptionsUpdate;
+        public void EmitGlobalOptionsUpdate(GlobalChallengeOptions options) {
+            OnGlobalOptionsUpdate?.Invoke(this, new Ps2EventArgs<GlobalChallengeOptions>(options));
+        }
+
+
     }
 }

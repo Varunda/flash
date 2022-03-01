@@ -1,7 +1,7 @@
 ﻿@using watchtower.Code
 @using watchtower.Models.Events
 
-@inject IMatchManager _Match
+@inject MatchManager _Match
 @inject IMatchEventBroadcastService _MatchEvents
 
 @implements IDisposable
@@ -24,6 +24,16 @@
 
         <div class="mb-3">
             <div>
+                <b>Kill span interval</b>
+            </div>
+            How many kills (combined between runners) occur inbetween an auto-challenge is ran
+
+            <InputNumber @bind-Value="_Settings.KillSpanInterval" class="form-control"></InputNumber>
+        </div>
+
+        @*
+        <div class="mb-3">
+            <div>
                 <b>Start delay</b>
             </div>
             How many seconds to wait before starting the first poll
@@ -39,6 +49,7 @@
 
             <InputNumber @bind-Value="_Settings.Interval" class="form-control"></InputNumber>
         </div>
+        *@
 
         <div class="mb-3">
             <div>
