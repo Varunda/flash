@@ -7,20 +7,21 @@
 @using watchtower.Pages.Components
 @using watchtower.Pages.Setup
 
-@inject IMatchManager _Match
+@inject MatchManager _Match
 @inject IMatchEventBroadcastService _MatchEvents
 
 <div class="container-fluid">
-
     <Header></Header>
 
     <div class="row">
         <div class="col-3">
-            <RunnerSetup Index="0"></RunnerSetup>
-        </div>
+            <h2>Match controls</h2>
 
-        <div class="col-3">
-            <RunnerSetup Index="1"></RunnerSetup>
+            <MatchOverview></MatchOverview>
+
+            <hr />
+
+            <MatchControls></MatchControls>
         </div>
 
         <div class="col-3">
@@ -65,24 +66,20 @@
             </div>
 
             <AdminLog></AdminLog>
-
         </div>
 
         <div class="col-3">
-            <h2>Match controls</h2>
-
-            <MatchOverview></MatchOverview>
-
-            <hr />
-
-            <MatchControls></MatchControls>
+            <RunnerSetup Index="0"></RunnerSetup>
         </div>
+
+        <div class="col-3">
+            <RunnerSetup Index="1"></RunnerSetup>
+        </div>
+
     </div>
 </div>
 
 @code {
-
-    private MatchState _MatchState = MatchState.UNSTARTED;
 
     private MatchSettings _MatchSettings = new MatchSettings();
 
@@ -92,7 +89,6 @@
     protected override void OnInitialized() {
         base.OnInitialized();
 
-        _MatchState = _Match.GetState();
         _MatchSettings = _Match.GetSettings();
 
         _killGoal = _MatchSettings.KillGoal.ToString();
@@ -122,13 +118,6 @@
 
             _Match.SetSettings(_MatchSettings);
         }
-    }
-
-    private void OnMatchStateEvent(object? sender, Ps2EventArgs<MatchState> args) {
-        _MatchState = args.Payload;
-        InvokeAsync(() => {
-            StateHasChanged();
-        });
     }
 
     private void OnMatchSettingsEvent(object? sender, Ps2EventArgs<MatchSettings> args) {

@@ -53,7 +53,6 @@ namespace watchtower.Realtime {
             _Stream.Subscribe(subscription);
         }
 
-
         private Task _OnMessageAsync(string msg) {
             if (msg == null) {
                 return Task.CompletedTask;

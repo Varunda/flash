@@ -38,5 +38,8 @@ namespace watchtower.Services {
         event EventHandler<Ps2EventArgs<List<IRunChallenge>>> OnActiveListUpdate;
         void EmitActiveListUpdate(List<IRunChallenge> challenges);
 
+        event EventHandler<Ps2EventArgs<GlobalChallengeOptions>> OnGlobalOptionsUpdate;
+        void EmitGlobalOptionsUpdate(GlobalChallengeOptions options);
+
     }
 }

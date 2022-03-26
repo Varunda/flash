@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using DSharpPlus.Entities;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,18 +10,25 @@ using watchtower.Census;
 using watchtower.Code;
 using watchtower.Code.Census.Implementations;
 using watchtower.Code.Challenge;
+using watchtower.Code.Constants;
 using watchtower.Constants;
 using watchtower.Models;
 using watchtower.Models.Census;
 using watchtower.Models.Events;
 using watchtower.Realtime;
+using watchtower.Services.Queue;
 
 namespace watchtower.Services
 {
 
-    public class MatchManager : IMatchManager
-    {
+    /// <summary>
+    /// Singleton service to manage a match
+    /// </summary>
+    public class MatchManager {
 
+        /// <summary>
+        /// How many times the timer will tick per second
+        /// </summary>
         const double TICKS_PER_SECOND = 10000000D;
 
         private readonly ILogger<MatchManager> _Logger;
@@ -37,10 +46,16 @@ namespace watchtower.Services
         private readonly IChallengeEventBroadcastService _ChallengeEvents;
         private readonly ISecondTimer _Timer;
 
-        private MatchState _State = MatchState.UNSTARTED;
+        private readonly DiscordThreadManager _ThreadManager;
+
+        private RoundState _RoundState = RoundState.UNSTARTED;
+        private MatchState _MatchState = MatchState.UNSTARTED;
         private DateTime _MatchStart = DateTime.UtcNow;
         private DateTime? _MatchEnd = null;
         private long _MatchTicks = 0;
+
+        private DateTime? _LastAutoChallenge = null;
+        private bool _PendingAutoChallenge = false;
 
         private readonly Dictionary<int, TrackedPlayer> _Players = new Dictionary<int, TrackedPlayer>();
         private MatchSettings _Settings = new MatchSettings();
@@ -52,8 +67,7 @@ namespace watchtower.Services
                 IRealtimeMonitor realtime, IChallengeEventBroadcastService challengeEvents,
                 IMatchMessageBroadcastService matchMessages, IAdminMessageBroadcastService adminMessages,
                 IChallengeManager challenges, ISecondTimer timer,
-                ExperienceCollection expColl)
-        {
+                ExperienceCollection expColl, DiscordThreadManager threadManager) {
 
             _Logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -75,27 +89,41 @@ namespace watchtower.Services
             SetSettings(new MatchSettings());
 
             AddListeners();
+            _ThreadManager = threadManager;
         }
 
-        private void AddListeners()
-        {
+        /// <summary>
+        /// Add the realtime listeners used to give score
+        /// </summary>
+        private void AddListeners() {
             _RealtimeEvents.OnKillEvent += KillHandler;
             _RealtimeEvents.OnExpEvent += ExpHandler;
 
             _Timer.OnTick += OnTick;
         }
 
-        public async Task<bool> AddCharacter(int index, string charName)
-        {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == false)
-            {
-                player = new TrackedPlayer
-                {
+        /// <summary>
+        /// Add a new character to a runner. If no runner at the index has been set, a new runner is created
+        /// </summary>
+        /// <param name="index">Index of the runner to add the character to</param>
+        /// <param name="charName">Name of the character to add. Case insensitive</param>
+        /// <returns>If the character was successfully added or not</returns>
+        public async Task<bool> AddCharacter(int index, string charName) {
+            if (_MatchState != MatchState.STARTED) {
+                return false;
+            }
+
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == false) {
+                player = new TrackedPlayer {
                     Index = index,
                     RunnerName = $"Runner {index + 1}"
                 };
 
                 _Players.Add(index, player);
+                bool res = await _ThreadManager.CreateScoreMessage(index, player.RunnerName);
+                if (res == false) {
+                    _AdminMessages.Log($"Failed to create score embed in match thread");
+                }
 
                 _AdminMessages.Log($"Created team {player.Index}:{player.RunnerName}");
             }
@@ -120,6 +148,7 @@ namespace watchtower.Services
             {
                 _AdminMessages.Log($"Renamed team {index}:{player.RunnerName} to {ch.Name}");
                 player.RunnerName = ch.Name;
+                await _ThreadManager.UpdateRunnerScore(index, player.RunnerName, player.Score);
             }
 
             player.Characters.Add(ch);
@@ -133,17 +162,21 @@ namespace watchtower.Services
                 }
             });
 
-            _AdminMessages.Log($"Team {index}:{player.RunnerName} added character {charName}");
+            string s = $"Team {index}:{player.RunnerName} added character {charName}";
+            _AdminMessages.Log(s);
 
             _MatchEvents.EmitPlayerUpdateEvent(index, player);
 
             return true;
         }
 
-        public void RemoveCharacter(int index, string charName)
-        {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
-            {
+        /// <summary>
+        /// Remove a character from a team
+        /// </summary>
+        /// <param name="index">Index of the team to remove the character from</param>
+        /// <param name="charName">Name of the character to be removed</param>
+        public void RemoveCharacter(int index, string charName) {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 player.Characters = player.Characters.Where(iter => iter.Name.ToLower() != charName.ToLower()).ToList();
                 _AdminMessages.Log($"Team {index}:{player.RunnerName} removed character {charName}");
             }
@@ -153,11 +186,12 @@ namespace watchtower.Services
             }
         }
 
-
-        public void SetSettings(MatchSettings settings)
-        {
-            if (_State == MatchState.RUNNING)
-            {
+        /// <summary>
+        /// Set the settings used in a match
+        /// </summary>
+        /// <param name="settings">Settings to use in the match</param>
+        public void SetSettings(MatchSettings settings) {
+            if (_RoundState == RoundState.RUNNING) {
                 _Logger.LogWarning($"Match is currently running, some settings may create funky behavior");
             }
 
@@ -170,10 +204,12 @@ namespace watchtower.Services
             _MatchEvents.EmitMatchSettingsEvent(_Settings);
         }
 
-        public void SetAutoChallengeSettings(AutoChallengeSettings auto)
-        {
-            if (_State == MatchState.RUNNING)
-            {
+        /// <summary>
+        /// Set the settings used for auto challenge
+        /// </summary>
+        /// <param name="auto">Settings</param>
+        public void SetAutoChallengeSettings(AutoChallengeSettings auto) {
+            if (_RoundState == RoundState.RUNNING) {
                 _Logger.LogWarning($"Not changing auto challenge settings, as match is running");
                 return;
             }
@@ -182,22 +218,29 @@ namespace watchtower.Services
             _MatchEvents.EmitAutoSettingsChange(_AutoSettings);
         }
 
-        public void SetRunnerName(int index, string? runnerName)
-        {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
-            {
-                player.RunnerName = runnerName ?? $"Runner {index + 1}";
-            }
-            else
-            {
+        /// <summary>
+        /// Set the name of a runner
+        /// </summary>
+        /// <param name="index">Index of the runner to set</param>
+        /// <param name="playerName">Name of the runner to set</param>
+        public void SetRunnerName(int index, string? runnerName) {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
+                string name = runnerName ?? $"Runner {index + 1}";
+
+                player.RunnerName = name;
+
+                _ = _ThreadManager.UpdateRunnerScore(index, name, player.Score);
+            } else {
                 _Logger.LogWarning($"Cannot set runner name for {index}, not in _Players");
             }
         }
 
-        public void IncrementScore(int index)
-        {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
-            {
+        /// <summary>
+        /// Increment the score of a team based on the index
+        /// </summary>
+        /// <param name="index">Index of the team to increment the score of</param>
+        public void IncrementScore(int index) {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 player.Streak++;
                 if (_Settings.KillGoal != 0)
                 {
@@ -206,17 +249,21 @@ namespace watchtower.Services
             }
         }
 
-        public void SetScore(int index, int score)
-        {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
-            {
+        /// <summary>
+        /// Set the score of a runner
+        /// </summary>
+        /// <param name="index">Index of the runner to set the score of</param>
+        /// <param name="score">Score to set the runner to</param>
+        public void SetScore(int index, int score) {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 player.Score = score;
                 _MatchEvents.EmitPlayerUpdateEvent(player.Index, player);
-                _MatchMessages.Log($"{_Settings.KillGoal}");
-                if (player.Score >= _Settings.KillGoal)
-                {
+
+                _ = _ThreadManager.UpdateRunnerScore(index, player.RunnerName, score);
+
+                if (player.Score >= _Settings.KillGoal) {
                     _MatchMessages.Log($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
-                    StopRound(index);
+                    _ = StopRound(index);
                 }
 
             }
@@ -224,12 +271,38 @@ namespace watchtower.Services
             {
                 _Logger.LogWarning($"Cannot set score of runner {index}, _Players does not contain");
             }
+
+            if (_PendingAutoChallenge == false) {
+                if (_LastAutoChallenge != null) {
+                    TimeSpan diff = DateTime.UtcNow - _LastAutoChallenge.Value;
+                    if (diff < TimeSpan.FromMinutes(5)) {
+                        _PendingAutoChallenge = true;
+                        _Logger.LogInformation($"Last auto challenge was started {diff} ago, setting pending and waiting");
+                        _MatchMessages.Log($"Last auto challenge was started {diff} ago, setting pending and waiting");
+                        return;
+                    }
+                }
+
+                int totalKillCount = 0;
+                foreach (KeyValuePair<int, TrackedPlayer> iter in _Players) {
+                    totalKillCount += iter.Value.ValidKills.Count;
+                }
+
+                if (totalKillCount % _AutoSettings.KillSpanInterval == 0) {
+                    _Logger.LogInformation($"Kill count interval hit, starting auto challenge");
+                    _MatchMessages.Log($"Hit a total of {totalKillCount} kills, starting auto challenge");
+
+                    StartAutoChallenge();
+                }
+            }
         }
 
-        public int? GetScore(int index)
-        {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
-            {
+        /// <summary>
+        /// Get the score of a runner, or null if it doesn't exist
+        /// </summary>
+        /// <param name="index">Index of the runner to get the score of</param>
+        public int? GetScore(int index) {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 return player.Score;
             }
 
@@ -237,19 +310,22 @@ namespace watchtower.Services
             return null;
         }
 
-        public TrackedPlayer? GetPlayer(int index)
-        {
-            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true)
-            {
+        /// <summary>
+        /// Get the runner being tracked
+        /// </summary>
+        /// <param name="index">Index of the runner to get</param>
+        public TrackedPlayer? GetPlayer(int index) {
+            if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 return player;
             }
             return null;
         }
 
-        private void OnTick(object? sender, SecondTimerArgs args)
-        {
-            if (_State != MatchState.RUNNING)
-            {
+        /// <summary>
+        /// Occurs every time the match time keeping tick occurs
+        /// </summary>
+        private void OnTick(object? sender, SecondTimerArgs args) {
+            if (_RoundState != RoundState.RUNNING) {
                 return;
             }
 
@@ -268,14 +344,29 @@ namespace watchtower.Services
 
             _MatchEvents.EmitTimerEvent(matchLength);
 
-            if (_AutoSettings.Enabled)
-            {
-                if ((matchLength - _AutoSettings.StartDelay) % _AutoSettings.Interval == 0)
-                {
+            if (_PendingAutoChallenge == true) {
+                if (_LastAutoChallenge == null) {
+                    StartAutoChallenge();
+                } else {
+                    TimeSpan diff = DateTime.UtcNow - _LastAutoChallenge.Value;
+                    if (diff > TimeSpan.FromMinutes(5)) {
+                        string s = $"starting pending auto challenge, it's been {diff}";
+                        _Logger.LogInformation(s);
+                        _AdminMessages.Log(s);
+
+                        StartAutoChallenge();
+                    }
+                }
+            }
+
+            /*
+            if (_AutoSettings.Enabled) {
+                if ((matchLength - _AutoSettings.StartDelay) % _AutoSettings.Interval == 0) {
                     _Logger.LogInformation($"Starting new auto challenge");
                     StartAutoChallenge();
                 }
             }
+            */
 
             foreach (IndexedChallenge entry in _Challenges.GetRunning())
             {
@@ -297,30 +388,75 @@ namespace watchtower.Services
             }
         }
 
-        public void StartRound()
-        {
-            if (_State == MatchState.RUNNING)
-            {
+        /// <summary>
+        /// Start a match, which will create the thread that speedrunners can join to view the active challenges
+        /// </summary>
+        public async Task StartMatch() {
+            if (_MatchState != MatchState.UNSTARTED) {
+                _Logger.LogWarning($"Cannot start match, state is not UNSTARTED, currently is {_MatchState}");
+                return;
+            }
+
+            SetMatchState(MatchState.STARTED);
+
+            if (await _ThreadManager.CreateMatchThread() == false) {
+                _Logger.LogWarning($"Failed to create match thread");
+                _AdminMessages.Log($"Failed to create match thread");
+                return;
+            }
+
+            if (await _ThreadManager.ConnectToVoice() == false) {
+                _Logger.LogWarning($"Failed to connect to voice");
+            }
+            _Logger.LogInformation($"Successfully started match");
+        }
+
+        /// <summary>
+        /// End a match, cleaning up the threads made and leave the voice channel
+        /// </summary>
+        public async Task EndMatch() {
+            if (_MatchState != MatchState.STARTED) {
+                _Logger.LogWarning($"Cannot end match, state is not STARTED, currently is {_MatchState}");
+                return;
+            }
+
+            if (await _ThreadManager.CloseThread() == false) {
+                _Logger.LogWarning($"Failed to close message thread");
+            }
+
+            if (await _ThreadManager.DisconnectFromVoice() == false) {
+                _Logger.LogWarning($"Failed to disconnect from voice");
+            }
+
+            SetMatchState(MatchState.UNSTARTED);
+        }
+
+        /// <summary>
+        /// Start a round. If the match is already running, nothing happens
+        /// </summary>
+        public async Task StartRound() {
+            if (_RoundState == RoundState.RUNNING) {
                 _Logger.LogWarning($"Not starting match, already started");
                 return;
             }
 
-            if (_State == MatchState.UNSTARTED)
-            {
+            if (_RoundState == RoundState.UNSTARTED) {
                 _MatchTicks = 0;
                 _MatchStart = DateTime.UtcNow;
                 _AdminMessages.Log($"Match unstarted, resetting ticks and start");
             }
 
-            SetState(MatchState.RUNNING);
+            SetRoundState(RoundState.RUNNING);
 
             _AdminMessages.Log($"Match started at {_MatchStart}");
+            await _ThreadManager.SendThreadMessage($"Round started at {_MatchStart.GetDiscordFormat()}");
         }
 
-        public void ClearMatch()
-        {
-            foreach (TrackedPlayer player in GetPlayers())
-            {
+        /// <summary>
+        /// Clear the match, resetting everything for another match
+        /// </summary>
+        public Task ClearMatch() {
+            foreach (TrackedPlayer player in GetPlayers()) {
                 player.Score = 0;
                 player.Scores = new List<ScoreEvent>();
                 player.Kills = new List<KillEvent>();
@@ -337,7 +473,7 @@ namespace watchtower.Services
 
             _MatchTicks = 0;
 
-            SetState(MatchState.UNSTARTED);
+            SetRoundState(RoundState.UNSTARTED);
             _MatchEvents.EmitTimerEvent(0);
 
             _MatchStart = DateTime.UtcNow;
@@ -347,10 +483,14 @@ namespace watchtower.Services
             _MatchMessages.Clear();
 
             _AdminMessages.Log($"Match cleared at {DateTime.UtcNow}");
+
+            return Task.CompletedTask;
         }
 
-        public void RestartRound()
-        {
+        /// <summary>
+        /// Restart an existing round. If a match is not running, nothing happens
+        /// </summary>
+        public Task RestartRound() {
             _MatchStart = DateTime.UtcNow;
             _MatchEnd = null;
             _MatchTicks = 0;
@@ -369,45 +509,59 @@ namespace watchtower.Services
                 player.Streaks = new List<int>();
             }
 
-            SetState(MatchState.UNSTARTED);
+            SetRoundState(RoundState.UNSTARTED);
 
             _AdminMessages.Log($"Match restarted at {DateTime.UtcNow}");
+
+            return Task.CompletedTask;
         }
 
-        public void PauseRound()
-        {
-            SetState(MatchState.PAUSED);
+        /// <summary>
+        /// Pause a currently running round
+        /// </summary>
+        public async Task PauseRound() {
+            SetRoundState(RoundState.PAUSED);
 
-            _AdminMessages.Log($"Round paused at {DateTime.UtcNow}");
+            _AdminMessages.Log($"Round paused at {DateTime.UtcNow:u}");
+
+            await _ThreadManager.SendThreadMessage($"Round paused at {DateTime.UtcNow.GetDiscordFormat()}");
         }
 
-        public void StopRound(int? winnerIndex = null)
-        {
+        /// <summary>
+        /// Stop the current round. Does nothing if a round isn't running
+        /// </summary>
+        public async Task StopRound(int? winnerIndex = null) {
             _MatchEnd = DateTime.UtcNow;
 
-            if (winnerIndex != null)
-            {
-                if (_Players.TryGetValue(winnerIndex.Value, out TrackedPlayer? runner) == true)
-                {
+            string s = $"Round over at {DateTime.UtcNow.GetDiscordFormat()}";
+
+            if (winnerIndex != null) {
+                if (_Players.TryGetValue(winnerIndex.Value, out TrackedPlayer? runner) == true) {
                     runner.Wins += 1;
                     _MatchEvents.EmitPlayerUpdateEvent(runner.Index, runner);
-                }
-                else
-                {
+
+                    s += $"\n**Winner:** {runner.RunnerName}";
+                } else {
+                    s += $"ERROR: Cannot set winner to index {winnerIndex.Value}, _Players does not have";
                     _Logger.LogWarning($"Cannot set winner to index {winnerIndex.Value}, _Players does not have");
                 }
             }
 
-            _Logger.LogInformation($"Match finished at {_MatchEnd}");
-            _AdminMessages.Log($"Match stopped at {DateTime.UtcNow}");
+            _Logger.LogInformation($"Match finished at {_MatchEnd:u}");
+            _AdminMessages.Log($"Match stopped at {_MatchEnd:u}");
+            await _ThreadManager.SendThreadMessage(s);
 
-            SetState(MatchState.FINISHED);
+            SetRoundState(RoundState.FINISHED);
         }
 
-        private void StartAutoChallenge()
-        {
-            if (_AutoSettings.OptionCount <= 0)
-            {
+        /// <summary>
+        /// Start a new auto challenge
+        /// </summary>
+        private void StartAutoChallenge() {
+            _PendingAutoChallenge = false;
+            _LastAutoChallenge = DateTime.UtcNow;
+
+            if (_AutoSettings.OptionCount <= 0) {
                 _Logger.LogWarning($"Cannot start auto poll, there are 0 options");
                 return;
             }
@@ -428,22 +582,37 @@ namespace watchtower.Services
             _Challenges.StartPoll(options);
         }
 
-        private void SetState(MatchState state)
-        {
-            if (_State == state)
-            {
+        /// <summary>
+        /// Helper to set the round state, and also emit the round state change
+        /// </summary>
+        private void SetRoundState(RoundState state) {
+            if (_RoundState == state) {
+                _Logger.LogDebug($"Not setting round state to {state}, is the current one");
+                return;
+            }
+
+            _RoundState = state;
+            _MatchEvents.EmitRoundStateEvent(_RoundState);
+        }
+
+        /// <summary>
+        /// Helper to set the match state, and also emit the match state change
+        /// </summary>
+        private void SetMatchState(MatchState state) {
+            if (_MatchState == state) {
                 _Logger.LogDebug($"Not setting match state to {state}, is the current one");
                 return;
             }
 
-            _State = state;
-            _MatchEvents.EmitMatchStateEvent(_State);
+            _MatchState = state;
+            _MatchEvents.EmitMatchStateEvent(_MatchState);
         }
 
-        private async void KillHandler(object? sender, Ps2EventArgs<KillEvent> args)
-        {
-            if (_State != MatchState.RUNNING)
-            {
+        /// <summary>
+        /// Handler whenever a Death event comes from the Realtime Census sockets
+        /// </summary>
+        private async void KillHandler(object? sender, Ps2EventArgs<KillEvent> args) {
+            if (_RoundState != RoundState.RUNNING) {
                 return;
             }
 
@@ -452,17 +621,14 @@ namespace watchtower.Services
             string sourceFactionID = Loadout.GetFaction(ev.LoadoutID);
             string targetFactionID = Loadout.GetFaction(ev.TargetLoadoutID);
 
-            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players)
-            {
+            bool emit = false;
+
+            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players) {
                 int index = entry.Key;
                 TrackedPlayer player = entry.Value;
 
-                bool emit = false;
-
-                foreach (Character c in player.Characters)
-                {
-                    if (ev.SourceID == c.ID && ev.TargetID == c.ID)
-                    {
+                foreach (Character c in player.Characters) {
+                    if (ev.SourceID == c.ID && ev.TargetID == c.ID) {
                         _Logger.LogInformation($"Player {index} committed suicide");
                         _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} SUICIDE");
 
@@ -475,15 +641,10 @@ namespace watchtower.Services
                         player.Deaths.Add(ev);
 
                         emit = true;
-                    }
-                    else if (c.ID == ev.SourceID)
-                    {
-                        emit = await HandleNotTKKill(args, index, player, c);
-                    }
-                    else if (c.ID == ev.TargetID)
-                    {
-                        if (player.Streak > 1)
-                        {
+                    } else if (c.ID == ev.SourceID) {
+                        emit = await HandleNotSuicideKill(args, index, player, c);
+                    } else if (c.ID == ev.TargetID) {
+                        if (player.Streak > 1) {
                             player.Streaks.Add(player.Streak);
                         }
                         player.Streak = 0;
@@ -508,8 +669,15 @@ namespace watchtower.Services
             }
         }
 
-        private async Task<bool> HandleNotTKKill(Ps2EventArgs<KillEvent> args, int index, TrackedPlayer player, Character c)
-        {
+        /// <summary>
+        /// Split the code up a bit it was getting BIG
+        /// </summary>
+        /// <param name="args"></param>
+        /// <param name="index"></param>
+        /// <param name="player"></param>
+        /// <param name="c"></param>
+        /// <returns></returns>
+        private async Task<bool> HandleNotSuicideKill(Ps2EventArgs<KillEvent> args, int index, TrackedPlayer player, Character c) {
             KillEvent ev = args.Payload;
 
             string sourceFactionID = Loadout.GetFaction(ev.LoadoutID);
@@ -543,8 +711,7 @@ namespace watchtower.Services
                             break;
                         }
 
-                        if (exp.Timestamp == ev.Timestamp && Experience.IsKill(exp.ExpID))
-                        {
+                        if (exp.Timestamp == ev.Timestamp && Experience.IsKill(exp.ExpID) && exp.TargetID == ev.TargetID) {
                             //_Logger.LogTrace($"Found {ev.Timestamp} in {exp.ExpID} {exp.Timestamp}");
                             expEvent = exp;
                             break;
@@ -629,7 +796,7 @@ namespace watchtower.Services
                         {
                             _Logger.LogInformation($"Player {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
                             _MatchMessages.Log($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
-                            StopRound(player.Index);
+                            await StopRound(player.Index);
                         }
                     }
                     else
@@ -650,10 +817,13 @@ namespace watchtower.Services
             return emit;
         }
 
-        private async void ExpHandler(object? sender, Ps2EventArgs<ExpEvent> args)
-        {
-            if (_State != MatchState.RUNNING)
-            {
+        /// <summary>
+        /// Experience handler
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="args"></param>
+        private async void ExpHandler(object? sender, Ps2EventArgs<ExpEvent> args) {
+            if (_RoundState != RoundState.RUNNING) {
                 return;
             }
 
@@ -690,14 +860,15 @@ namespace watchtower.Services
             _MatchMessages.Log($"Team {runner.Index}:{runner.RunnerName} @{c?.Name} {direction} {entry?.Description ?? $"missing {ev.ExpID}"}");
         }
 
-        private TrackedPlayer? _GetRunnerFromID(string charID)
-        {
-            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players)
-            {
-                foreach (Character c in entry.Value.Characters)
-                {
-                    if (c.ID == charID)
-                    {
+        /// <summary>
+        /// Get the team based on the character ID
+        /// </summary>
+        /// <param name="charID"></param>
+        /// <returns></returns>
+        private TrackedPlayer? _GetRunnerFromID(string charID) {
+            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players) {
+                foreach (Character c in entry.Value.Characters) {
+                    if (c.ID == charID) {
                         return entry.Value;
                     }
                 }
@@ -706,14 +877,15 @@ namespace watchtower.Services
             return null;
         }
 
-        private Character? _GetCharacterFromID(string charID)
-        {
-            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players)
-            {
-                foreach (Character c in entry.Value.Characters)
-                {
-                    if (c.ID == charID)
-                    {
+        /// <summary>
+        /// Get the character based on the character ID
+        /// </summary>
+        /// <param name="charID"></param>
+        /// <returns></returns>
+        private Character? _GetCharacterFromID(string charID) {
+            foreach (KeyValuePair<int, TrackedPlayer> entry in _Players) {
+                foreach (Character c in entry.Value.Characters) {
+                    if (c.ID == charID) {
                         return c;
                     }
                 }
@@ -722,13 +894,47 @@ namespace watchtower.Services
             return null;
         }
 
-        public MatchState GetState() => _State;
+        /// <summary>
+        /// Get the current state of the round
+        /// </summary>
+        public RoundState GetRoundState() => _RoundState;
+
+        /// <summary>
+        /// Get the current state of the match
+        /// </summary>
+        public MatchState GetMatchState() => _MatchState;
+
+        /// <summary>
+        /// Get the <c>DateTime</c> of when a match was started
+        /// </summary>
         public DateTime GetMatchStart() => _MatchStart;
+
+        /// <summary>
+        /// Get the <c>DateTime</c> of when the match ended, or <c>null</c> if it hasn't ended
+        /// </summary>
         public DateTime? GetMatchEnd() => _MatchEnd;
+
+        /// <summary>
+        /// Get all runners in this match
+        /// </summary>
+        /// <returns>The list of runners</returns>
         public List<TrackedPlayer> GetPlayers() => _Players.Values.ToList();
+
+        /// <summary>
+        /// Get how many seconds a match has been running for. Not really useful if the match has not started
+        /// </summary>
         public int GetMatchLength() => (int)Math.Round(_MatchTicks / TICKS_PER_SECOND);
+
+        /// <summary>
+        /// Get the current settings in a match
+        /// </summary>
         public MatchSettings GetSettings() => _Settings;
+
+        /// <summary>
+        /// Get the auto challenge settings
+        /// </summary>
         public AutoChallengeSettings GetAutoChallengeSettings() => _AutoSettings;
 
     }
+
 }

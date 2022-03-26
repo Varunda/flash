@@ -1,11 +1,13 @@
-﻿@using watchtower.Services
+﻿@using watchtower.Code.Constants
+@using watchtower.Services
 @using watchtower.Models.Events
-
-@inject IMatchManager _Match  
-@inject IAdminMessageBroadcastService _AdminMessages
 
 <div>
     <h2>Runner @(Index + 1)</h2>
+
+    @if (_MatchState != MatchState.STARTED) {
+        <h4 class="text-danger">Match is not started, cannot setup runners</h4>
+    }
 
     <EditForm Model="@_charName" OnValidSubmit="AddCharacter">
         <div class="input-group">
@@ -16,7 +18,7 @@
             <input type="text" class="form-control" @bind-value="_charName" disabled="@(_loading == true)" />
 
             <div class="input-group-append">
-                <button type="submit" class="btn btn-success">
+                <button type="submit" class="btn btn-success" disabled="@(_MatchState != MatchState.STARTED)">
                     Add
                 </button>
             </div>
@@ -32,7 +34,7 @@
             <input type="text" class="form-control" @bind-value="_teamName" />
 
             <div class="input-group-append">
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary" disabled="@(_MatchState != MatchState.STARTED)">
                     Update
                 </button>
             </div>
@@ -98,12 +100,18 @@
     }
 </div>
 
+@inject MatchManager _Match  
+@inject IAdminMessageBroadcastService _AdminMessages
+@inject IMatchEventBroadcastService _MatchEvents
+
 @code {
 
     [Parameter]
     public int Index { get; set; }
 
     private TrackedPlayer? _player;
+
+    private MatchState _MatchState;
 
     private string _charName = "";
     private string _teamName = "";
@@ -114,6 +122,9 @@
         base.OnInitialized();
 
         _player = _Match.GetPlayer(Index);
+        _MatchState = _Match.GetMatchState();
+
+        _MatchEvents.OnMatchStateEvent += OnMatchStateEvent;
     }
 
     private async Task AddCharacter() {
@@ -158,6 +169,13 @@
 
         _Match.SetScore(Index, _player.Score - 1);
         _AdminMessages.Log($"Manually removed score from {Index}:{_player.RunnerName}, score is {_player.Score}");
+    }
+
+    private void OnMatchStateEvent(object? sender, Ps2EventArgs<MatchState> args) {
+        _MatchState = args.Payload;
+        InvokeAsync(() => {
+            StateHasChanged();
+        });
     }
 
 }

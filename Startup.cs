@@ -21,6 +21,7 @@ using watchtower.Services.Db;
 using watchtower.Services.Hosted;
 using watchtower.Services.Implementations;
 using watchtower.Code.Census.Implementations;
+using watchtower.Services.Queue;
 
 namespace watchtower {
 
@@ -53,10 +54,11 @@ namespace watchtower {
             services.AddSingleton<ExperienceCollection, ExperienceCollection>();
 
             services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+            services.AddSingleton<DiscordMessageQueue>();
             services.AddSingleton<ICommandBus, CommandBus>();
 
             services.AddSingleton<ISecondTimer, SecondTimer>();
-            services.AddSingleton<IMatchManager, MatchManager>();
+            services.AddSingleton<MatchManager>();
             services.AddSingleton<IChallengeManager, ChallengeManager>();
             services.AddSingleton<IRealtimeEventBroadcastService, RealtimeEventBroadcastService>();
             services.AddSingleton<ITwitchChatBroadcastService, TwitchChatBroadcastService>();
@@ -71,9 +73,14 @@ namespace watchtower {
             services.AddHostedService<HostedRealtimeMonitor>();
             services.AddHostedService<HostedEventProcessService>();
             services.AddHostedService<HostedTwitchEventService>();
+            services.AddHostedService<HostedDiscordMessageService>();
 
             services.Configure<DbOptions>(Configuration.GetSection("DbOptions"));
             services.Configure<TwitchOptions>(Configuration.GetSection("Twitch"));
+            services.Configure<DiscordOptions>(Configuration.GetSection("Discord"));
+
+            services.AddSingleton<DiscordWrapper>();
+            services.AddSingleton<DiscordThreadManager>();
 
             Console.WriteLine($"Services configured");
         }

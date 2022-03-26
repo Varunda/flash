@@ -14,11 +14,11 @@ namespace watchtower.Commands {
     public class ScoreCommand {
 
         private readonly ILogger<ScoreCommand> _Logger;
-        private readonly IMatchManager _Match;
+        private readonly MatchManager _Match;
 
         public ScoreCommand(IServiceProvider services) {
             _Logger = services.GetRequiredService<ILogger<ScoreCommand>>();
-            _Match = services.GetRequiredService<IMatchManager>();
+            _Match = services.GetRequiredService<MatchManager>();
         }
 
         public void Add(int index, int amount) {
