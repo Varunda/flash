@@ -32,12 +32,6 @@
             <span class="overlay-score overlay-score-left">
                 @if (_player1 != null) {
                     @_player1.Score
-                    @if (_player1.Score > 9) 
-                    {
-                        <div class="sr-vertical-center">
-                        <div class="circle-left"></div>
-                        </div>
-                    }
                 }
             </span>
 
@@ -48,12 +42,6 @@
             <span class="overlay-score overlay-score-right">
                 @if (_player2 != null) {
                     @_player2.Score
-                    @if (_player2.Score > 9) 
-                    {
-                        <div class="sr-vertical-center">
-                        <div class="circle-right"></div>
-                        </div>
-                    }
                 }
             </span>
 
