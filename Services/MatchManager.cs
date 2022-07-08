@@ -324,7 +324,7 @@ namespace watchtower.Services {
 
             _MatchTicks += args.ElapsedTicks;
 
-            int matchLength = (int) Math.Round(_MatchTicks / TICKS_PER_SECOND);
+            int matchLength = (int)Math.Round(_MatchTicks / TICKS_PER_SECOND);
 
             _MatchEvents.EmitTimerEvent(matchLength);
 
@@ -362,7 +362,7 @@ namespace watchtower.Services {
 
                 _ChallengeEvents.EmitChallengeUpdate(entry);
 
-                if ((int)Math.Round(entry.TickCount / TICKS_PER_SECOND) > entry.Challenge.Duration) {
+                if ((int) Math.Round(entry.TickCount / TICKS_PER_SECOND) > entry.Challenge.Duration) {
                     _Logger.LogDebug($"{entry.Index} {entry.Challenge.ID}/{entry.Challenge.Name} done");
                     _Challenges.End(entry.Index);
                 }

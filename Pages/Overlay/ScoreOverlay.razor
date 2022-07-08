@@ -11,6 +11,7 @@
 <!--
 <img src="/font/example.png" style="position:absolute; z-index: -10;" />
 -->
+
 <div class="sr-vertical-center">
     <!--
     <span>
@@ -18,9 +19,10 @@
             <span class="overlay-streak overlay-streak-left">
                 @_player1.Streak
             </span>
-        }
+        } 
     </span>
     -->
+
     <div class="overlay-border-wrap">
         <div class="overlay-parent">
             <span class="overlay-name overlay-name-left">
@@ -59,7 +61,7 @@
             <span class="overlay-streak overlay-streak-right">
                 @_player2.Streak
             </span>
-        }
+        } 
     </span>
     -->
 
@@ -108,6 +110,7 @@
     </div>
 
 </div>
+
 
 <style>
     .table td {
@@ -215,6 +218,7 @@
         text-align: right;
         border-color: var(--color-secondary);
     }
+
 </style>
 
 @code {
@@ -301,8 +305,9 @@
 
     private void OnTimerUpdate(object? sender, Ps2EventArgs<int> args) {
         _MatchLength = args.Payload;
+        
         /*
-        if (_player2 != null) {
+        if (_player1 != null) {
             _p1KPM = (double) _player1.ValidKills.Count / Math.Max(1D, (double) _MatchLength) * 60D;
             if (_player1.Score == 0) {
                 _p1Left = 0;
