@@ -14,8 +14,7 @@
 <div class="sr-vertical-center">
 
     <span>
-        @if (_player1 != null && _player1.Streak > 0)
-        {
+        @if (_player1 != null && _player1.Streak > 0) {
             <span class="overlay-streak overlay-streak-left">
                 @_player1.Streak
             </span>
@@ -25,15 +24,13 @@
     <div class="overlay-border-wrap">
         <div class="overlay-parent">
             <span class="overlay-name overlay-name-left">
-                @if (_player1 != null)
-                {
+                @if (_player1 != null) {
                     @_player1.RunnerName
                 }
             </span>
 
             <span class="overlay-score overlay-score-left">
-                @if (_player1 != null)
-                {
+                @if (_player1 != null) {
                     @_player1.Score
                 }
             </span>
@@ -43,15 +40,13 @@
             </span>
 
             <span class="overlay-score overlay-score-right">
-                @if (_player2 != null)
-                {
+                @if (_player2 != null) {
                     @_player2.Score
                 }
             </span>
 
             <span class="overlay-name overlay-name-right">
-                @if (_player2 != null)
-                {
+                @if (_player2 != null) {
                     @_player2.RunnerName
                 }
             </span>
@@ -60,8 +55,7 @@
 
 
     <span>
-        @if (_player2 != null && _player2.Streak > 0)
-        {
+        @if (_player2 != null && _player2.Streak > 0) {
             <span class="overlay-streak overlay-streak-right">
                 @_player2.Streak
             </span>
@@ -71,17 +65,12 @@
 
     <div>
         <span class="overlay-wins overlay-wins-left">
-            @if (_player1 != null)
-            {
-                for (int i = _RoundCount; i > 0; --i)
-                {
-                    if (i <= _player1.Wins)
-                    {
+            @if (_player1 != null) {
+                for (int i = _RoundCount; i > 0; --i) {
+                    if (i <= _player1.Wins) {
                         <span class="overlay-indicator overlay-win-win">
                         </span>
-                    }
-                    else
-                    {
+                    } else {
                         <span class="overlay-indicator overlay-win-lose">
                         </span>
                     }
@@ -94,17 +83,12 @@
         </span>
 
         <span class="overlay-wins overlay-wins-right">
-            @if (_player2 != null)
-            {
-                for (int i = 0; i < _RoundCount; ++i)
-                {
-                    if (i < _player2.Wins)
-                    {
+            @if (_player2 != null) {
+                for (int i = 0; i < _RoundCount; ++i) {
+                    if (i < _player2.Wins) {
                         <span class="overlay-indicator overlay-win-win">
                         </span>
-                    }
-                    else
-                    {
+                    } else {
                         <span class="overlay-indicator overlay-win-lose">
                         </span>
                     }
@@ -114,13 +98,11 @@
     </div>
 
     <div class="d-hidden">
-        @if (_playStart == true)
-        {
+        @if (_playStart == true) {
             <audio autoplay src="/sounds/start_beep.mp3"></audio>
         }
 
-        @if (_playEnd == true)
-        {
+        @if (_playEnd == true) {
             <audio autoplay src="/sounds/end_beep.mp3"></audio>
         }
     </div>
@@ -248,8 +230,7 @@
     private bool _playStart = false;
     private bool _playEnd = false;
 
-    protected override void OnInitialized()
-    {
+    protected override void OnInitialized() {
         base.OnInitialized();
 
         _MatchEvents.OnPlayerUpdateEvent += PlayerUpdateHandler;
@@ -267,8 +248,7 @@
         UpdateWinCount();
     }
 
-    public void Dispose()
-    {
+    public void Dispose() {
         _MatchEvents.OnPlayerUpdateEvent -= PlayerUpdateHandler;
         _MatchEvents.OnTimerEvent -= OnTimerUpdate;
         _MatchEvents.OnMatchSettingsEvent -= OnSettingsUpdate;
@@ -277,36 +257,28 @@
         _ChallengeEvents.OnPollEnded -= OnPollEnded;
     }
 
-    private void PlayerUpdateHandler(object? sender, Ps2EventArgs<TrackedPlayer?> args)
-    {
+    private void PlayerUpdateHandler(object? sender, Ps2EventArgs<TrackedPlayer?> args) {
         TrackedPlayer? player = args.Payload;
 
-        if (player != null)
-        {
-            if (player.Index == 0)
-            {
+        if (player != null) {
+            if (player.Index == 0) {
                 _player1 = player;
-            }
-            else if (player.Index == 1)
-            {
+            } else if (player.Index == 1) {
                 _player2 = player;
             }
         }
 
         UpdateWinCount();
 
-        InvokeAsync(() =>
-        {
+        InvokeAsync(() => {
             StateHasChanged();
         });
     }
 
-    private void OnPollStarted(object? sender, Ps2EventArgs<ChallengePollResults> args)
-    {
+    private void OnPollStarted(object? sender, Ps2EventArgs<ChallengePollResults> args) {
         _playStart = true;
 
-        InvokeAsync(async () =>
-        {
+        InvokeAsync(async () => {
             StateHasChanged();
 
             await Task.Delay(5000);
@@ -315,12 +287,10 @@
         });
     }
 
-    private void OnPollEnded(object? sender, Ps2EventArgs<ChallengePollResults> args)
-    {
+    private void OnPollEnded(object? sender, Ps2EventArgs<ChallengePollResults> args) {
         _playEnd = true;
 
-        InvokeAsync(async () =>
-        {
+        InvokeAsync(async () => {
             StateHasChanged();
 
             await Task.Delay(5000);
@@ -329,46 +299,41 @@
         });
     }
 
-    private void OnTimerUpdate(object? sender, Ps2EventArgs<int> args)
-    {
+    private void OnTimerUpdate(object? sender, Ps2EventArgs<int> args) {
         _MatchLength = args.Payload;
         /*
-        if (_player1 != null) {
-        _p1KPM = (double) _player1.ValidKills.Count / Math.Max(1D, (double) _MatchLength) * 60D;
-        if (_player1.Score == 0) {
-        _p1Left = 0;
-        } else {
-        int killsLeft = _MatchSettings.KillGoal - _player1.Score;
-        double left = Math.Round((double) killsLeft / (_p1KPM / 60));
-        _p1Left = (int) left;
-        }
+            _p1KPM = (double) _player1.ValidKills.Count / Math.Max(1D, (double) _MatchLength) * 60D;
+            if (_player1.Score == 0) {
+                _p1Left = 0;
+            } else {
+                int killsLeft = _MatchSettings.KillGoal - _player1.Score;
+                double left = Math.Round((double) killsLeft / (_p1KPM / 60));
+                _p1Left = (int) left;
+            }
         }
 
         if (_player2 != null) {
-        _p2KPM = (double) _player2.ValidKills.Count / Math.Max(1D, (double) _MatchLength) * 60D;
-        if (_player2.Score == 0) {
-        _p2Left = 0;
-        } else {
-        int killsLeft = _MatchSettings.KillGoal - _player2.Score;
-        double left = Math.Round((double) killsLeft / (_p2KPM / 60));
-        _p2Left = (int) left;
-        }
+            _p2KPM = (double) _player2.ValidKills.Count / Math.Max(1D, (double) _MatchLength) * 60D;
+            if (_player2.Score == 0) {
+                _p2Left = 0;
+            } else {
+                int killsLeft = _MatchSettings.KillGoal - _player2.Score;
+                double left = Math.Round((double) killsLeft / (_p2KPM / 60));
+                _p2Left = (int) left;
+            }
         }
         */
 
-        InvokeAsync(() =>
-        {
+        InvokeAsync(() => {
             StateHasChanged();
         });
     }
 
-    private void OnSettingsUpdate(object? sender, Ps2EventArgs<MatchSettings> args)
-    {
+    private void OnSettingsUpdate(object? sender, Ps2EventArgs<MatchSettings> args) {
         _MatchSettings = args.Payload;
     }
 
-    private void UpdateWinCount()
-    {
+    private void UpdateWinCount() {
         _RoundCount = (_player1?.Wins ?? 0) + (_player2?.Wins ?? 0);
     }
 

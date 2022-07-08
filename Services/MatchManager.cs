@@ -324,7 +324,7 @@ namespace watchtower.Services {
 
             _MatchTicks += args.ElapsedTicks;
 
-            int matchLength = (int)Math.Round(_MatchTicks / TICKS_PER_SECOND);
+            int matchLength = (int) Math.Round(_MatchTicks / TICKS_PER_SECOND);
 
             _MatchEvents.EmitTimerEvent(matchLength);
 
