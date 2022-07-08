@@ -12,7 +12,7 @@
 <img src="/font/example.png" style="position:absolute; z-index: -10;" />
 -->
 <div class="sr-vertical-center">
-
+    <!--
     <span>
         @if (_player1 != null && _player1.Streak > 0) {
             <span class="overlay-streak overlay-streak-left">
@@ -20,7 +20,7 @@
             </span>
         }
     </span>
-
+    -->
     <div class="overlay-border-wrap">
         <div class="overlay-parent">
             <span class="overlay-name overlay-name-left">
@@ -53,7 +53,7 @@
         </div>
     </div>
 
-
+    <!--
     <span>
         @if (_player2 != null && _player2.Streak > 0) {
             <span class="overlay-streak overlay-streak-right">
@@ -61,7 +61,7 @@
             </span>
         }
     </span>
-
+    -->
 
     <div>
         <span class="overlay-wins overlay-wins-left">
@@ -124,7 +124,7 @@
     .overlay-border-wrap {
         padding: 1rem;
         position: relative;
-        background: linear-gradient(90deg, rgba(255, 0, 152, 1) 0%, rgba(255, 0, 152, 1) 40%, rgba(102, 0, 255, 1) 60%, rgba(102, 0, 255, 1) 100%);
+        background: linear-gradient(90deg, rgba(255,0,152,1) 0%, rgba(255,0,152,1) 40%, rgba(102,0,255,1) 60%, rgba(102,0,255,1) 100%);
         padding: 3px;
         display: inline-block;
     }
@@ -302,6 +302,7 @@
     private void OnTimerUpdate(object? sender, Ps2EventArgs<int> args) {
         _MatchLength = args.Payload;
         /*
+        if (_player2 != null) {
             _p1KPM = (double) _player1.ValidKills.Count / Math.Max(1D, (double) _MatchLength) * 60D;
             if (_player1.Score == 0) {
                 _p1Left = 0;

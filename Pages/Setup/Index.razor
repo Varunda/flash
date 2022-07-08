@@ -107,12 +107,10 @@
         }
     }
 
-    private void SetTimeGoal()
-    {
+    private void SetTimeGoal() {
         bool valid = Int32.TryParse(_timeGoal, out int timeGoal);
 
-        if (valid)
-        {
+        if (valid) {
             _MatchSettings.TimeGoal = timeGoal;
 
             _Match.SetSettings(_MatchSettings);
