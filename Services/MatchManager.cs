@@ -135,13 +135,12 @@ namespace watchtower.Services {
             }
 
             Character? ch = await _CharacterColleciton.GetByNameAsync(charName);
-            if (ch == null){
+            if (ch == null) {
                 _Logger.LogWarning($"Failed to add character {charName} to Runner {index}, does not exist");
                 return false;
             }
 
-            if (player.RunnerName == $"Runner {index + 1}")
-            {
+            if (player.RunnerName == $"Runner {index + 1}") {
                 _AdminMessages.Log($"Renamed team {index}:{player.RunnerName} to {ch.Name}");
                 player.RunnerName = ch.Name;
                 await _ThreadManager.UpdateRunnerScore(index, player.RunnerName, player.Score);
@@ -235,10 +234,7 @@ namespace watchtower.Services {
         public void IncrementScore(int index) {
             if (_Players.TryGetValue(index, out TrackedPlayer? player) == true) {
                 player.Streak++;
-                if (_Settings.KillGoal != 0)
-                {
-                    SetScore(index, player.Score + 1);
-                }
+                SetScore(index, player.Score + 1);
             }
         }
 
@@ -258,7 +254,6 @@ namespace watchtower.Services {
                     _MatchMessages.Log($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
                     _ = StopRound(index);
                 }
-
             } else {
                 _Logger.LogWarning($"Cannot set score of runner {index}, _Players does not contain");
             }
@@ -357,10 +352,8 @@ namespace watchtower.Services {
             }
             */
 
-            foreach (IndexedChallenge entry in _Challenges.GetRunning())
-            {
-                if (entry.Challenge.DurationType != ChallengeDurationType.TIMED)
-                {
+            foreach (IndexedChallenge entry in _Challenges.GetRunning()) {
+                if (entry.Challenge.DurationType != ChallengeDurationType.TIMED) {
                     continue;
                 }
 
@@ -369,7 +362,7 @@ namespace watchtower.Services {
 
                 _ChallengeEvents.EmitChallengeUpdate(entry);
 
-                if ((int)Math.Round(entry.TickCount / TICKS_PER_SECOND) > entry.Challenge.Duration){
+                if ((int)Math.Round(entry.TickCount / TICKS_PER_SECOND) > entry.Challenge.Duration) {
                     _Logger.LogDebug($"{entry.Index} {entry.Challenge.ID}/{entry.Challenge.Name} done");
                     _Challenges.End(entry.Index);
                 }
@@ -644,8 +637,7 @@ namespace watchtower.Services {
                     }
                 }
 
-                if (emit == true)
-                {
+                if (emit == true) {
                     _MatchEvents.EmitPlayerUpdateEvent(index, player);
                 }
             }
@@ -711,8 +703,7 @@ namespace watchtower.Services {
                         int score = 1;
 
                         List<IndexedChallenge> runningChallenges = _Challenges.GetRunning();
-                        foreach (IndexedChallenge challenge in runningChallenges)
-                        {
+                        foreach (IndexedChallenge challenge in runningChallenges) {
                             bool met = await challenge.Challenge.WasMet(ev, weapon);
 
                             if (_Challenges.GetMode() == ChallengeMode.MEAN) {
@@ -724,8 +715,7 @@ namespace watchtower.Services {
                                     _ChallengeEvents.EmitChallengeUpdate(challenge);
                                 }
                             } else if (_Challenges.GetMode() == ChallengeMode.NICE) {
-                                if (met == true)
-                                {
+                                if (met == true) {
                                     challenge.KillCount += 1;
                                     _ChallengeEvents.EmitChallengeUpdate(challenge);
                                     _Logger.LogTrace($"Team {index}:{player.RunnerName} @{c.Name} met challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}, score mult {challenge.Challenge.Multiplier}");
