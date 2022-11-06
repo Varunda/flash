@@ -318,7 +318,7 @@ namespace watchtower.Services {
             if (_Settings.TimeGoal != 0){
                 if (GetMatchLength() >= _Settings.TimeGoal - 1){
                     _MatchMessages.Log($"Time goal reached, ending match");
-                    StopRound(null);
+                    _ = StopRound(null);
                 }
             }
 

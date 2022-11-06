@@ -53,14 +53,14 @@ namespace watchtower {
                     Console.Error.WriteLine($"Missing ICommandBus");
                 }
 
-                string line = "";
+                string? line = "";
                 while (line != ".close") {
                     line = Console.ReadLine();
 
                     if (line == ".close") {
                         break;
                     } else {
-                        if (commands != null) {
+                        if (line != null && commands != null) {
                             await commands.Execute(line);
                         }
                     }

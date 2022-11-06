@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Nullable>enable</Nullable>
     <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
     <UserSecretsId>0a62f18d-38a1-4707-b21d-afa2da7eb68a</UserSecretsId>
@@ -23,8 +23,8 @@
   <ItemGroup>
     <PackageReference Include="BlazorAnimate" Version="3.0.0" />
     <PackageReference Include="DaybreakGames.Census" Version="3.1.0" />
-    <PackageReference Include="DSharpPlus" Version="4.2.0-nightly-01080" />
-    <PackageReference Include="DSharpPlus.VoiceNext" Version="4.2.0-nightly-01080" />
+    <PackageReference Include="DSharpPlus" Version="4.2.0-nightly-01091" />
+    <PackageReference Include="DSharpPlus.VoiceNext" Version="4.2.0-nightly-01091" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="3.1.11" />
     <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="4.1.2">
       <PrivateAssets>all</PrivateAssets>

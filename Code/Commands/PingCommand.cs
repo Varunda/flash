@@ -17,9 +17,9 @@ namespace watchtower.Commands {
         private readonly ICharacterCollection _Characters;
 
         public PingCommand(IServiceProvider services) {
-            _Logger = (ILogger<PingCommand>)services.GetService(typeof(ILogger<PingCommand>));
+            _Logger = services.GetRequiredService<ILogger<PingCommand>>();
 
-            _Characters = (ICharacterCollection)services.GetService(typeof(ICharacterCollection));
+            _Characters = services.GetRequiredService<ICharacterCollection>();
         }
 
         public void Ping() {

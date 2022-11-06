@@ -411,7 +411,12 @@ namespace watchtower.Services {
                     UseShellExecute = false
                 };
 
-                Process process = Process.Start(ffmpeg);
+                Process? process = Process.Start(ffmpeg);
+                if (process == null) {
+                    _Logger.LogWarning($"Failed to start ffmpeg");
+                    return false;
+                }
+
                 Stream outputStream = process.StandardOutput.BaseStream;
 
                 VoiceTransmitSink voiceOutput = _VoiceConnection.GetTransmitSink();

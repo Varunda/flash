@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -17,9 +18,9 @@ namespace watchtower.Commands {
         private readonly ICharacterCollection _Characters;
 
         public CharCommand(IServiceProvider services) {
-            _Logger = (ILogger<CharCommand>)services.GetService(typeof(ILogger<CharCommand>));
+            _Logger = services.GetRequiredService<ILogger<CharCommand>>();
 
-            _Characters = (ICharacterCollection)services.GetService(typeof(ICharacterCollection));
+            _Characters = services.GetRequiredService<ICharacterCollection>();
         }
 
         public async Task Get(string name) {
