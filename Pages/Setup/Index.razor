@@ -42,6 +42,22 @@
                     </div>
                 </EditForm>
             </div>
+            <div class="mb-4">
+                Time goal (seconds): 
+
+                <EditForm Model="@_timeGoal" OnValidSubmit="SetTimeGoal">
+                    <div class="input-group">
+                        <input type="text" class="form-control" @bind-value="_timeGoal" />
+
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary">
+                                Update
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
 
             <hr />
 
@@ -69,12 +85,15 @@
 
     private string _killGoal = "";
 
+    private string _timeGoal = "";
     protected override void OnInitialized() {
         base.OnInitialized();
 
         _MatchSettings = _Match.GetSettings();
 
         _killGoal = _MatchSettings.KillGoal.ToString();
+
+        _timeGoal = _MatchSettings.TimeGoal.ToString();
 
         _MatchEvents.OnMatchSettingsEvent += OnMatchSettingsEvent;
     }
@@ -84,6 +103,15 @@
 
         if (valid) {
             _MatchSettings.KillGoal = killGoal;
+            _Match.SetSettings(_MatchSettings);
+        }
+    }
+
+    private void SetTimeGoal() {
+        bool valid = Int32.TryParse(_timeGoal, out int timeGoal);
+
+        if (valid) {
+            _MatchSettings.TimeGoal = timeGoal;
 
             _Match.SetSettings(_MatchSettings);
         }

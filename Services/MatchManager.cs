@@ -190,7 +190,7 @@ namespace watchtower.Services {
             _Settings = settings;
 
             _Logger.LogInformation($"Match settings:" +
-                $"\n\tKillGoal: {_Settings.KillGoal}"
+                $"\n\tKillGoal: {_Settings.KillGoal}" + $"\n\tTimeGoal:{_Settings.TimeGoal}"
             );
 
             _MatchEvents.EmitMatchSettingsEvent(_Settings);
@@ -313,6 +313,13 @@ namespace watchtower.Services {
         private void OnTick(object? sender, SecondTimerArgs args) {
             if (_RoundState != RoundState.RUNNING) {
                 return;
+            }
+
+            if (_Settings.TimeGoal != 0){
+                if (GetMatchLength() >= _Settings.TimeGoal - 1){
+                    _MatchMessages.Log($"Time goal reached, ending match");
+                    StopRound(null);
+                }
             }
 
             _MatchTicks += args.ElapsedTicks;
@@ -741,7 +748,7 @@ namespace watchtower.Services {
                         _Logger.LogInformation($"Player {index}:{player.RunnerName} on {c.Name} valid weapon {score} points, {weapon.Name}/{weapon.CategoryID}");
                         _MatchMessages.Log($"Team {index}:{player.RunnerName} @{c.Name} VALID kill {score} points, {weapon.Name}/{weapon.CategoryID}, faction {targetFactionID}");
 
-                        if (player.Score >= _Settings.KillGoal) {
+                        if (player.Score >= _Settings.KillGoal && _Settings.KillGoal != 0) {
                             _Logger.LogInformation($"Player {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
                             _MatchMessages.Log($"Team {index}:{player.RunnerName} reached goal {_Settings.KillGoal}, ending match");
                             await StopRound(player.Index);
