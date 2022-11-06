@@ -7,6 +7,8 @@ namespace watchtower.Models {
 
     public class TwitchOptions {
 
+        public bool Enabled { get; set; } = false;
+
         public string AccessToken { get; set; } = "";
 
         public string ChatUsername { get; set; } = "";

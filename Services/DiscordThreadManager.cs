@@ -58,20 +58,29 @@ namespace watchtower.Services {
         /// </summary>
         /// <returns>If the thread was successfully created</returns>
         public async Task<bool> CreateMatchThread() {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return true;
+            }
+
             try {
-                _Guild = await _DiscordWrapper.GetClient().GetGuildAsync(_DiscordOptions.Value.GuildId);
+                DSharpPlus.DiscordClient? client = _DiscordWrapper.GetClient();
+                if (client == null) {
+                    throw new Exception($"Discord client is null, but is enabled?");
+                }
+
+                _Guild = await client.GetGuildAsync(_DiscordOptions.Value.GuildId);
                 if (_Guild == null) {
                     _AdminMessages.Log($"Unable to find Discord guild {_DiscordOptions.Value.GuildId}");
                     return false;
                 }
 
-                DiscordChannel? parentChannel = await _DiscordWrapper.GetClient().GetChannelAsync(_DiscordOptions.Value.ParentChannelId);
+                DiscordChannel? parentChannel = await client.GetChannelAsync(_DiscordOptions.Value.ParentChannelId);
                 if (parentChannel == null) {
                     _AdminMessages.Log($"Unable to find parent channel {_DiscordOptions.Value.ParentChannelId}");
                     return false;
                 }
 
-                _VoiceChannel = await _DiscordWrapper.GetClient().GetChannelAsync(_DiscordOptions.Value.VoiceChannelId);
+                _VoiceChannel = await client.GetChannelAsync(_DiscordOptions.Value.VoiceChannelId);
                 if (_VoiceChannel == null) {
                     _AdminMessages.Log($"Unable to find voice channel {_DiscordOptions.Value.VoiceChannelId}");
                     return false;
@@ -105,6 +114,10 @@ namespace watchtower.Services {
         }
 
         public async Task<bool> UpdateActiveChallenge(IRunChallenge challenge) {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return true;
+            }
+
             if (_ChallengeMessage == null) {
                 _Logger.LogWarning($"Cannot update active challenge: no challenge message");
                 return false;
@@ -127,6 +140,10 @@ namespace watchtower.Services {
         }
         
         public async Task<bool> ClearActiveChallenge() {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return true;
+            }
+
             if (_ChallengeMessage == null) {
                 _Logger.LogWarning($"Cannot clear active challenge: no challenge message");
                 return false;
@@ -154,6 +171,10 @@ namespace watchtower.Services {
         /// <param name="index"></param>
         /// <returns></returns>
         public async Task<bool> CreateScoreMessage(int index, string runnerName) {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return true;
+            }
+
             if (_ScoreMessages.ContainsKey(index) == true) {
                 _Logger.LogWarning($"Cannot create score message for runner {index}: message already exists");
                 return false;
@@ -186,6 +207,10 @@ namespace watchtower.Services {
         }
 
         public async Task<bool> UpdateRunnerScore(int runnerIndex, string runnerName, int score) {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return true;
+            }
+
             if (_ScoreMessages.TryGetValue(runnerIndex, out DiscordMessage? msg) == false) {
                 _Logger.LogWarning($"Cannot update runner {runnerIndex}/{runnerName} with score {score}: messages does not contain index");
                 return false;
@@ -213,6 +238,10 @@ namespace watchtower.Services {
         /// <param name="msg">Message to be sent</param>
         /// <returns>If the message was successfully sent or not</returns>
         public async Task<bool> SendThreadMessage(string msg) {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return true;
+            }
+
             if (_MatchThread == null) {
                 _Logger.LogWarning($"Cannot send thread message, thread is null");
                 return false;
@@ -229,6 +258,10 @@ namespace watchtower.Services {
         }
 
         public async Task<bool> ConnectToVoice() {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return true;
+            }
+
             if (_VoiceChannel == null) {
                 _Logger.LogWarning($"Voice channel is null, cannot connect");
                 return false;
@@ -260,15 +293,19 @@ namespace watchtower.Services {
             return true;
         }
 
-        public async Task<bool> DisconnectFromVoice() {
+        public Task<bool> DisconnectFromVoice() {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return Task.FromResult(true);
+            }
+
             if (_VoiceChannel == null) {
-                return true;
+                return Task.FromResult(true);
             }
 
             try {
                 VoiceNextExtension? voice = _DiscordWrapper.GetClient().GetVoiceNext();
                 if (voice == null) {
-                    return true;
+                    return Task.FromResult(true);
                 }
 
                 VoiceNextConnection? conn = voice.GetConnection(_Guild);
@@ -278,10 +315,10 @@ namespace watchtower.Services {
             } catch (Exception ex) {
                 _Logger.LogError(ex, "failed to disconnect from voice");
                 _AdminMessages.Log($"error disconnecting to voice: {ex.Message}");
-                return false;
+                return Task.FromResult(false);
             }
 
-            return true;
+            return Task.FromResult(true);
         }
 
         /// <summary>
@@ -290,6 +327,10 @@ namespace watchtower.Services {
         /// <param name="reason">Optional reason the thread is being closed</param>
         /// <returns>If the operation was successful or not</returns>
         public async Task<bool> CloseThread(string? reason = null) {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return true;
+            }
+
             if (_MatchThread == null) {
                 return false;
             }
@@ -315,6 +356,10 @@ namespace watchtower.Services {
         /// </summary>
         /// <returns></returns>
         public Task<bool> PlayStartNoise() {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return Task.FromResult(true);
+            }
+
             string file = Directory.GetCurrentDirectory() + "/wwwroot/sounds/start_beep.mp3";
             return Playfile(file);
         }
@@ -324,6 +369,10 @@ namespace watchtower.Services {
         /// </summary>
         /// <returns></returns>
         public Task<bool> PlayEndNoise() {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return Task.FromResult(true);
+            }
+
             string file = Directory.GetCurrentDirectory() + "/wwwroot/sounds/end_beep.mp3";
             return Playfile(file);
         }
@@ -334,6 +383,10 @@ namespace watchtower.Services {
         /// <param name="file">Name of the file to play</param>
         /// <returns>If playing the file was successful</returns>
         public async Task<bool> Playfile(string file) {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                return true;
+            }
+
             if (File.Exists(file) == false) {
                 _Logger.LogWarning($"failed to play file: file '{file}' does not exist");
                 return false;

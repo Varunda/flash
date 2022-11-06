@@ -345,8 +345,10 @@ namespace watchtower.Services {
             }
             */
 
+            GlobalChallengeOptions options = _Challenges.GetGlobalOptions();
+
             foreach (IndexedChallenge entry in _Challenges.GetRunning()) {
-                if (entry.Challenge.DurationType != ChallengeDurationType.TIMED) {
+                if (options.Type != ChallengeDurationType.TIMED) {
                     continue;
                 }
 
@@ -355,7 +357,7 @@ namespace watchtower.Services {
 
                 _ChallengeEvents.EmitChallengeUpdate(entry);
 
-                if ((int) Math.Round(entry.TickCount / TICKS_PER_SECOND) > entry.Challenge.Duration) {
+                if ((int) Math.Round(entry.TickCount / TICKS_PER_SECOND) > options.Duration) {
                     _Logger.LogDebug($"{entry.Index} {entry.Challenge.ID}/{entry.Challenge.Name} done");
                     _Challenges.End(entry.Index);
                 }
@@ -718,7 +720,9 @@ namespace watchtower.Services {
                                 _Logger.LogError($"Unknown challenge mode {_Challenges.GetMode()}");
                             }
 
-                            if (challenge.Challenge.DurationType == ChallengeDurationType.KILLS && challenge.KillCount >= challenge.Challenge.Duration) {
+                            GlobalChallengeOptions options = _Challenges.GetGlobalOptions();
+
+                            if (options.Type == ChallengeDurationType.KILLS && challenge.KillCount >= options.Duration) {
                                 _Logger.LogDebug($"Team {index}:{player.RunnerName} @{c.Name} finished challenge {challenge.Challenge.ID}/{challenge.Challenge.Name}");
                                 _Challenges.End(challenge.Index);
                             }

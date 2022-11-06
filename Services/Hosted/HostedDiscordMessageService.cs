@@ -41,6 +41,11 @@ namespace watchtower.Services.Hosted {
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+            if (_DiscordWrapper.IsEnabled() == false) {
+                _Logger.LogInformation($"{SERVICE_NAME}> discord is disabled, not running message queue service");
+                return;
+            }
+
             _Logger.LogInformation($"Started {SERVICE_NAME}");
 
             while (stoppingToken.IsCancellationRequested == false) {
@@ -52,7 +57,12 @@ namespace watchtower.Services.Hosted {
 
                     string msg = await _MessageQueue.Dequeue(stoppingToken);
 
-                    DiscordChannel? channel = await _DiscordWrapper.GetClient().GetChannelAsync(_DiscordOptions.Value.ParentChannelId);
+                    DiscordClient? client = _DiscordWrapper.GetClient();
+                    if (client == null) {
+                        throw new Exception($"Client is null but Discord features are enabled?");
+                    }
+
+                    DiscordChannel? channel = await client.GetChannelAsync(_DiscordOptions.Value.ParentChannelId);
                     if (channel == null) {
                         _Logger.LogWarning($"Failed to find channel {_DiscordOptions.Value.ParentChannelId}, cannot send message");
                     } else {

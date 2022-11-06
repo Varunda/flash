@@ -2,6 +2,8 @@
 
     public class DiscordOptions {
 
+        public bool Enabled { get; set; } = false;
+
         public ulong GuildId { get; set; }
 
         public ulong VoiceChannelId { get; set; }

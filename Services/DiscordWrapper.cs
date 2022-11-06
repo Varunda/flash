@@ -15,7 +15,7 @@ namespace watchtower.Services {
 
         private readonly ILogger<DiscordWrapper> _Logger;
 
-        private readonly DiscordClient _Discord;
+        private readonly DiscordClient? _Discord;
         private IOptions<DiscordOptions> _DiscordOptions;
         private VoiceNextExtension? _Voice = null;
 
@@ -27,6 +27,10 @@ namespace watchtower.Services {
             _Logger = logger;
 
             _DiscordOptions = options;
+
+            if (_DiscordOptions.Value.Enabled == false) {
+                return;
+            }
 
             try {
                 _Discord = new DiscordClient(new DiscordConfiguration() {
@@ -40,6 +44,13 @@ namespace watchtower.Services {
             _Discord.Ready += Client_Ready;
             _ = StartClient(CancellationToken.None);
         }
+        
+        /// <summary>
+        /// Return if the Discord functions are enabled or not
+        /// </summary>
+        public bool IsEnabled() {
+            return _DiscordOptions.Value.Enabled;
+        }
 
         /// <summary>
         /// Start the Discord bot, connecting it to the gateway and setting up the voice
@@ -47,7 +58,11 @@ namespace watchtower.Services {
         /// <param name="cancel"></param>
         /// <returns></returns>
         public async Task<bool> StartClient(CancellationToken cancel) {
-            await _Discord.ConnectAsync();
+            if (IsEnabled() == false) {
+                return true;
+            }
+
+            await _Discord!.ConnectAsync();
             _Voice =  _Discord.UseVoiceNext();
 
             _Logger.LogInformation($"Bot started and voice setup");
@@ -59,7 +74,11 @@ namespace watchtower.Services {
         /// Disconnect the Discord bot from the gateway
         /// </summary>
         public async Task<bool> DisconnectClient() {
-            await _Discord.DisconnectAsync();
+            if (IsEnabled() == false) {
+                return true;
+            }
+
+            await _Discord!.DisconnectAsync();
             return true;
         }
 
@@ -69,10 +88,10 @@ namespace watchtower.Services {
         public bool IsConnected() => _IsConnected;
 
         /// <summary>
-        /// Get the wrapped Discord client
+        /// Get the wrapped Discord client, or null if discord is not enabled
         /// </summary>
         /// <returns></returns>
-        public DiscordClient GetClient() {
+        public DiscordClient? GetClient() {
             return _Discord;
         }
 
