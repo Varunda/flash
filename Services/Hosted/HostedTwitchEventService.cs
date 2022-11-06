@@ -79,7 +79,12 @@ namespace watchtower.Services.Hosted {
 
             _Logger.LogDebug($"Connecting to chat: {_Options.Value.ChatTargetChannel}");
 
+            if (_Options.Value.Enabled == false) {
+                return Task.CompletedTask;
+            }
+
             try {
+
                 ConnectionCredentials creds = new ConnectionCredentials(_Options.Value.ChatUsername, _Options.Value.ChatOAuth);
                 _TwitchClient.Initialize(creds);
                 _TwitchClient.Connect();
